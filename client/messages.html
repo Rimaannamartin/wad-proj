@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages</title>
+  <link rel="stylesheet" href="./assets/css/messages.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <div class="chat-app">
+    <!-- Sidebar -->
+    <div class="chat-sidebar">
+      <h2>Chats</h2>
+      <ul id="chat-list">
+        <li onclick="openChat('Alice')">Alice</li>
+        <li onclick="openChat('Bob')">Bob</li>
+        <li onclick="openChat('Charlie')">Charlie</li>
+      </ul>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-main">
+      <div class="chat-header">
+        <span id="chat-user">Select a user</span>
+        <div class="chat-actions">
+          <button><i class="fas fa-phone"></i></button>
+          <button><i class="fas fa-video"></i></button>
+        </div>
+      </div>
+
+      <div class="chat-box" id="chat-box">
+        <p class="placeholder">Select a chat to start messaging</p>
+      </div>
+
+      <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Type a message..." disabled>
+        <button onclick="sendMessage()" disabled id="send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./assets/js/messages.js"></script>
+</body>
+</html>

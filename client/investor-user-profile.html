@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investor User Profile</title>
+  <link rel="stylesheet" href="investor-user-profile.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <div class="profile-container">
+    <div class="profile-card fade-in">
+      <h2 class="glow-text">Investor User Profile</h2>
+
+      <!-- Display Investor Profile -->
+      <div id="investorDetails" class="hidden slide-up">
+        <p><strong>Name:</strong> <span id="invName"></span></p>
+        <p><strong>Email:</strong> <span id="invEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="invPhone"></span></p>
+        <p><strong>Interested Fields:</strong> <span id="invFields"></span></p>
+        <p><strong>Bio:</strong> <span id="invBio"></span></p>
+
+        <button id="editInvestorBtn" class="btn">Edit Profile</button>
+        <button id="editBioBtn" class="btn">Add/Edit Bio</button>
+      </div>
+
+      <!-- Form to create / edit Investor -->
+      <form id="investorForm" class="slide-up">
+        <div class="input-group">
+          <label for="invFirstName">First Name</label>
+          <input type="text" id="invFirstName" required>
+        </div>
+
+        <div class="input-group">
+          <label for="invLastName">Last Name</label>
+          <input type="text" id="invLastName" required>
+        </div>
+
+        <div class="input-group">
+          <label for="invEmail">Email</label>
+          <input type="email" id="invEmailInput" required>
+          <button type="button" id="sendOtpBtn" class="btn small">Send OTP</button>
+        </div>
+
+        <div class="input-group hidden" id="otpSection">
+          <label for="otpInput">Enter OTP</label>
+          <input type="text" id="otpInput" maxlength="6">
+          <button type="button" id="verifyOtpBtn" class="btn small">Verify OTP</button>
+          <p id="otpStatus"></p>
+        </div>
+
+        <div class="input-group">
+          <label for="invPhone">Phone Number</label>
+          <input type="text" id="invPhoneInput" maxlength="10" required>
+        </div>
+
+        <div class="input-group">
+          <label for="invFields">Interested Fields</label>
+          <select id="invFieldsInput" multiple required>
+            <option value="Technology">Technology</option>
+            <option value="Real Estate">Real Estate</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Finance">Finance</option>
+            <option value="Energy">Energy</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn glow-btn">Create Profile</button>
+      </form>
+
+      <!-- Bio Section -->
+      <div id="bioSection" class="hidden slide-up">
+        <div class="input-group">
+          <label for="bioInput">Your Bio</label>
+          <textarea id="bioInput" rows="3" placeholder="Enter your bio..."></textarea>
+        </div>
+        <button id="saveBioBtn" class="btn glow-btn">Save Bio</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="investor-user-profile.js"></script>
+</body>
+</html>
