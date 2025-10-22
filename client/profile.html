@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile Creation</title>
-  <link rel="stylesheet" href="profile.css">
+  <link rel="stylesheet" href="./assets/css/profile.css">
 </head>
 <body>
     <div class="site-name">Investor Connect</div>
@@ -14,32 +14,32 @@
 
       <!-- First Name -->
       <div class="form-group">
-        <label>First Name</label>
-        <input type="text" id="firstName" pattern="[A-Za-z]+" title="Letters only" required>
+        <label for="firstName">First Name</label>
+        <input type="text" id="firstName" pattern="[A-Za-z]+" title="Letters only" required placeholder="First name">
       </div>
 
       <!-- Surname -->
       <div class="form-group">
-        <label>Surname</label>
-        <input type="text" id="surname" pattern="[A-Za-z]+" title="Letters only" required>
+        <label for="surname">Surname</label>
+        <input type="text" id="surname" pattern="[A-Za-z]+" title="Letters only" required placeholder="Surname">
       </div>
 
       <!-- Age -->
       <div class="form-group">
-        <label>Age</label>
-        <input type="number" id="age" min="1" max="120" required>
+        <label for="age">Age</label>
+        <input type="number" id="age" min="1" max="120" required placeholder="Age">
       </div>
 
       <!-- Date of Birth -->
       <div class="form-group">
-        <label>Date of Birth</label>
-        <input type="date" id="dob" required>
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob" required title="Date of birth">
       </div>
 
       <!-- Profile Picture -->
       <div class="form-group">
-        <label>Profile Picture</label>
-        <input type="file" id="profilePic" accept="image/*" required>
+        <label for="profilePic">Profile Picture</label>
+        <input type="file" id="profilePic" accept="image/*" required aria-label="Profile picture input">
         <img id="previewPic" src="" alt="Preview" class="hidden">
       </div>
 
@@ -69,6 +69,6 @@
     <p id="message"></p>
   </div>
 
-  <script src="profile.js"></script>
+  <script src="./assets/js/profile.js"></script>
 </body>
 </html>

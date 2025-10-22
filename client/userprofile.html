@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Profile</title>
-  <link rel="stylesheet" href="userprofile.css">
+  <link rel="stylesheet" href="./assets/css/userprofile.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
@@ -58,29 +58,29 @@
   <!-- Edit Profile Modal -->
   <div id="editModal" class="modal hidden">
     <div class="modal-content">
-      <button class="close-modal-btn" id="closeModalIcon"><i class="fas fa-times"></i></button>
+  <button class="close-modal-btn" id="closeModalIcon" aria-label="Close edit profile modal" title="Close"><i class="fas fa-times" aria-hidden="true"></i></button>
       <h2>Edit Profile</h2>
       <form id="editProfileForm">
-        <label>First Name</label>
-        <input type="text" id="editFirstName" required>
+  <label for="editFirstName">First Name</label>
+  <input type="text" id="editFirstName" required placeholder="First name" title="First name">
 
-        <label>Surname</label>
-        <input type="text" id="editSurname" required>
+  <label for="editSurname">Surname</label>
+  <input type="text" id="editSurname" required placeholder="Surname" title="Surname">
 
-        <label>Age</label>
-        <input type="number" id="editAge" required>
+  <label for="editAge">Age</label>
+  <input type="number" id="editAge" required placeholder="Age" title="Age">
 
-        <label>Date of Birth</label>
-        <input type="date" id="editDob" required>
+  <label for="editDob">Date of Birth</label>
+  <input type="date" id="editDob" required title="Date of birth">
 
-        <label>Email</label>
-        <input type="email" id="editEmail" required>
+  <label for="editEmail">Email</label>
+  <input type="email" id="editEmail" required placeholder="you@example.com" title="Email">
 
-        <label>Phone</label>
-        <input type="tel" id="editPhone" required>
+  <label for="editPhone">Phone</label>
+  <input type="tel" id="editPhone" required placeholder="Phone number" title="Phone number">
 
-        <label>Profile Picture</label>
-        <input type="file" id="editProfilePic" accept="image/*">
+  <label for="editProfilePic">Profile Picture</label>
+  <input type="file" id="editProfilePic" accept="image/*" title="Profile picture">
 
         <button type="submit">Save Changes</button>
         <button type="button" id="closeModal">Cancel</button>
@@ -91,7 +91,7 @@
   <!-- Edit Bio Modal -->
   <div id="bioModal" class="modal hidden">
     <div class="modal-content">
-      <button class="close-modal-btn" id="closeBioModalIcon"><i class="fas fa-times"></i></button>
+  <button class="close-modal-btn" id="closeBioModalIcon" aria-label="Close edit bio modal" title="Close"><i class="fas fa-times" aria-hidden="true"></i></button>
       <h2>Edit Bio</h2>
       <form id="editBioForm">
         <textarea id="bioInput" rows="4" placeholder="Write something about yourself..." required></textarea>
@@ -101,6 +101,6 @@
     </div>
   </div>
 
-  <script src="userprofile.js"></script>
+  <script src="./assets/js/userprofile.js"></script>
 </body>
 </html>

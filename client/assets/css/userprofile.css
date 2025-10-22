@@ -1,0 +1,12 @@
+/* moved userprofile.css */
+:root{--primary-bg:#0D1B2A;--accent-color:#0095f6;--muted:#A9A9A9}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial;background:linear-gradient(180deg,var(--primary-bg) 0%, #071521 100%);color:#fff}
+.site-name{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-bottom:1px solid rgba(255,255,255,0.03);z-index:1200}
+.profile-page{max-width:935px;margin:74px auto 80px;padding:22px}
+.profile-header{position:relative;display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;margin-bottom:36px;padding:18px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0));overflow:visible}
+.profile-photo{width:150px;height:150px;border-radius:50%;object-fit:cover;border:3px solid var(--accent-color)}
+.tab-button{padding:12px 14px;background:none;border:none;color:var(--muted);font-weight:700}
+.content-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.post, .video{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:6px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center}
+.hidden{display:none!important}

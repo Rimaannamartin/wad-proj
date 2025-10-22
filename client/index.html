@@ -5,32 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pitching Platform - Dark Theme</title>
     <link rel="stylesheet" href="./assets/css/style.css">
+    <link rel="stylesheet" href="./assets/css/profile.css">
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="logo-text">InvestorConnect</div>
-        <ul>
-            <li><a href="about.html">About</a></li>
-            <li><a href="pitchescroll.html">Pitches</a></li>
-            <li><a href="login.html">Login</a></li>git commit -m "Your descriptive commit message"
-            <li><a href="messages.html">Messages</a></li>
-            <li><a href="addpost.html">Add post</a></li>
-        </ul>
-    </nav>
+        <nav class="navbar">
+                <div class="brand">
+                        <div class="brand-mark">🪙</div>
+                        <div>
+                                <div class="logo-text">InvestorConnect</div>
+                                <div class="tag">Where startups meet investors</div>
+                        </div>
+                </div>
 
-    <div class="main-container">
-        <div class="sub-container">
-            <p>Welcome to <strong>PitchConnect</strong>  - Where Startups Meet Investors!</p>
-            <button class="btn">Get Started</button>
-        </div>
-    </div>
+                <button class="hamburger" id="navToggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+
+                <div class="nav-links" id="navLinks">
+                        <a href="index.html" class="accent">Home</a>
+                        <a href="about.html">About</a>
+                        <a href="pitchescroll.html">Pitches</a>
+                        <a href="messages.html">Messages</a>
+                        <a href="addpost.html">Add post</a>
+                        <a href="login.html" class="btn-outline">Login</a>
+                </div>
+        </nav>
+
+        <section class="hero">
+            <div class="blob blob-1" aria-hidden="true"></div>
+            <div class="blob blob-2" aria-hidden="true"></div>
+
+            <div class="hero-card">
+                <div class="hero-left">
+                    <h1>Find the next <span class="accent-text">big startup</span> — fast.</h1>
+                    <p class="lead">InvestorConnect helps founders showcase short pitches and find matching investors quickly. Browse curated startups, save favourites, and request pitch decks.</p>
+
+                    <div class="cta-row">
+                        <a href="pitchescroll.html" class="btn-primary">Browse Pitches</a>
+                        <a href="addpost.html" class="btn-ghost">Create Pitch</a>
+                    </div>
+
+                    <ul class="quick-stats">
+                        <li><strong>1.2k</strong><span>Investors</span></li>
+                        <li><strong>3.4k</strong><span>Startups</span></li>
+                        <li><strong>8.9k</strong><span>Matches</span></li>
+                    </ul>
+                </div>
+
+                <div class="hero-right">
+                    <div class="card-stack">
+                        <div class="mock-card card-a">Featured Pitch</div>
+                        <div class="mock-card card-b">Top Startup</div>
+                        <div class="mock-card card-c">Investor Picks</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature">
+                <div class="icon">🚀</div>
+                <h3>Fast Discovery</h3>
+                <p>Discover validated startups in minutes using filters and recommendations.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🤝</div>
+                <h3>Secure Introductions</h3>
+                <p>Make connections privately and track introductions in your dashboard.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📂</div>
+                <h3>Organised Pitches</h3>
+                <p>Save, request decks, and manage communications — all in one place.</p>
+            </div>
+        </section>
+
+        <footer class="site-footer">
+            <div>© <span id="year"></span> InvestorConnect</div>
+            <div>Built with ❤️</div>
+        </footer>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="./assets/js/index.js"></script>
 
 </body>
-<<<<<<< HEAD
 </html>
 
 
-=======
-</html>
->>>>>>> 38f7b76f60e4af8165c148a7ee60fc17ee0f6a0b

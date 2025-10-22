@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Investor User Profile</title>
-  <link rel="stylesheet" href="investor-user-profile.css">
+  <link rel="stylesheet" href="./assets/css/investor-user-profile.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -28,17 +28,17 @@
       <form id="investorForm" class="slide-up">
         <div class="input-group">
           <label for="invFirstName">First Name</label>
-          <input type="text" id="invFirstName" required>
+          <input type="text" id="invFirstName" required placeholder="First name">
         </div>
 
         <div class="input-group">
           <label for="invLastName">Last Name</label>
-          <input type="text" id="invLastName" required>
+          <input type="text" id="invLastName" required placeholder="Surname">
         </div>
 
         <div class="input-group">
           <label for="invEmail">Email</label>
-          <input type="email" id="invEmailInput" required>
+          <input type="email" id="invEmailInput" required placeholder="you@example.com" title="Email">
           <button type="button" id="sendOtpBtn" class="btn small">Send OTP</button>
         </div>
 
@@ -51,12 +51,12 @@
 
         <div class="input-group">
           <label for="invPhone">Phone Number</label>
-          <input type="text" id="invPhoneInput" maxlength="10" required>
+          <input type="text" id="invPhoneInput" maxlength="10" required placeholder="Phone number" title="Phone number">
         </div>
 
         <div class="input-group">
           <label for="invFields">Interested Fields</label>
-          <select id="invFieldsInput" multiple required>
+          <select id="invFieldsInput" multiple required aria-label="Interested fields">
             <option value="Technology">Technology</option>
             <option value="Real Estate">Real Estate</option>
             <option value="Healthcare">Healthcare</option>
@@ -79,6 +79,6 @@
     </div>
   </div>
 
-  <script src="investor-user-profile.js"></script>
+  <script src="./assets/js/investor-user-profile.js"></script>
 </body>
 </html>
