@@ -9,9 +9,19 @@
 <body>
   <header>
     <h1 class="site-title">Investor Connect</h1>
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search startups...">
-      <button onclick="searchStartups()">Search</button>
+
+    <!-- Tabs directly under title -->
+    <div class="tabs">
+      <input type="text" id="startupSearch" placeholder="Search startups...">
+      <input type="text" id="location" placeholder="Search location...">
+      <select id="category">
+        <option>Technology</option>
+        <option>Real Estate</option>
+        <option>Healthcare</option>
+        <option>Finance</option>
+        <option>Energy</option>
+      </select>
+      <button class="search-btn">Search</button>
     </div>
   </header>
 
@@ -63,7 +73,5 @@
       </div>
     </section>
   </main>
-
-  <script src="./assets/js/explore.js"></script>
 </body>
 </html>
