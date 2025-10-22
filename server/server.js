@@ -1,5 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const path = require('path');
 const connectDb = require("./config/connect")
 const userRoutes = require('./routes/userRoutes')
 const session = require("express-session");
@@ -23,7 +24,16 @@ app.use(session({
 
 
 }))
+const cors = require("cors");
+app.use(cors({ origin: "http://localhost:5000", credentials: true }));
 
+// Serve static files from client folder
+app.use(express.static(path.join(__dirname, '../client')));
+
+// Serve index.html as root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
 
 app.use('/api/v1/userAuth',userRoutes)
 
