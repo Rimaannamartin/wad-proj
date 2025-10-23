@@ -4,26 +4,52 @@ let locationMarker;
 let selectedLocation = null;
 let uploadedMedia = [];
 
+// API Configuration
+const API_BASE_URL = 'http://localhost:5000/api/v1';
+
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
     initializeMediaUpload();
     initializeLocationDetection();
     initializeFormSubmission();
+    checkAuthentication();
 });
 
-// Map initialization
+// Check if user is authenticated
+function checkAuthentication() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('Please login to create a post');
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// Get auth headers
+function getAuthHeaders(expectJson = true) {
+    const token = localStorage.getItem('token');
+    const headers = {
+        'Authorization': `Bearer ${token}`
+    };
+
+    if (expectJson) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;
+}
+
+// Map initialization (unchanged)
 function initializeMap() {
-    // Create map with default view (New York)
     map = L.map('locationMap').setView([40.7128, -74.0060], 13);
     
-    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
 
-    // Add click event to set location
     map.on('click', function(e) {
         setPostLocation(e.latlng);
     });
@@ -31,16 +57,14 @@ function initializeMap() {
     console.log('Map initialized successfully');
 }
 
-// Set post location on map
+// Set post location on map (unchanged)
 function setPostLocation(latlng) {
     selectedLocation = latlng;
     
-    // Remove existing marker
     if (locationMarker) {
         map.removeLayer(locationMarker);
     }
     
-    // Add new marker
     locationMarker = L.marker(latlng, {
         icon: L.divIcon({
             className: 'custom-marker',
@@ -50,14 +74,11 @@ function setPostLocation(latlng) {
         })
     }).addTo(map);
     
-    // Update coordinate inputs
     document.getElementById('latitude').value = latlng.lat.toFixed(6);
     document.getElementById('longitude').value = latlng.lng.toFixed(6);
     
-    // Get address from coordinates
     getAddressFromCoordinates(latlng.lat, latlng.lng);
     
-    // Add popup
     locationMarker.bindPopup(`
         <div style="text-align: center; padding: 10px;">
             <strong style="color: #00e0ff;">📍 Selected Location</strong><br>
@@ -68,11 +89,10 @@ function setPostLocation(latlng) {
         </div>
     `).openPopup();
     
-    // Zoom to location
     map.setView(latlng, 15);
 }
 
-// Get address from coordinates
+// Get address from coordinates (unchanged)
 function getAddressFromCoordinates(lat, lng) {
     const addressElement = document.getElementById('locationAddress');
     addressElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting address...';
@@ -95,7 +115,7 @@ function getAddressFromCoordinates(lat, lng) {
         });
 }
 
-// Location detection
+// Location detection (unchanged)
 function initializeLocationDetection() {
     const locationBtn = document.getElementById('detectLocation');
     const mapOverlay = document.getElementById('mapOverlay');
@@ -115,14 +135,12 @@ function initializeLocationDetection() {
                         lng: position.coords.longitude
                     };
                     
-                    // Show accuracy indicator for high precision
                     if (position.coords.accuracy < 50) {
                         accuracyIndicator.classList.remove('hidden');
                     }
                     
                     setPostLocation(latlng);
                     
-                    // Success state
                     mapOverlay.classList.remove('active');
                     locationBtn.innerHTML = '<i class="fas fa-check"></i> Location Found!';
                     
@@ -134,7 +152,6 @@ function initializeLocationDetection() {
                 function(error) {
                     console.error('Error getting location:', error);
                     
-                    // Error state
                     mapOverlay.classList.remove('active');
                     locationBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
                     
@@ -163,23 +180,20 @@ function initializeLocationDetection() {
     });
 }
 
-// Media upload functionality
+// Media upload functionality (unchanged)
 function initializeMediaUpload() {
     const uploadArea = document.getElementById('uploadArea');
     const mediaInput = document.getElementById('mediaInput');
     const browseBtn = document.getElementById('browseBtn');
     const mediaPreview = document.getElementById('mediaPreview');
 
-    // Browse button click
     browseBtn.addEventListener('click', () => {
         console.log('Browse button clicked');
         mediaInput.click();
     });
 
-    // File input change
     mediaInput.addEventListener('change', handleFileSelect);
 
-    // Drag and drop functionality
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, preventDefaults, false);
     });
@@ -205,7 +219,6 @@ function initializeMediaUpload() {
         uploadArea.classList.remove('dragover');
     }
 
-    // Handle drop
     uploadArea.addEventListener('drop', handleDrop, false);
 
     function handleDrop(e) {
@@ -230,16 +243,16 @@ function initializeMediaUpload() {
     }
 
     function validateFile(file) {
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime'];
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        const maxSize = 5 * 1024 * 1024; // 5MB (matches backend)
 
         if (!validTypes.includes(file.type)) {
-            alert('Please select valid image or video files (JPG, PNG, GIF, MP4, MOV)');
+            alert('Please select valid image files (JPG, PNG, GIF)');
             return false;
         }
 
         if (file.size > maxSize) {
-            alert('File size must be less than 50MB');
+            alert('File size must be less than 5MB');
             return false;
         }
 
@@ -260,21 +273,13 @@ function initializeMediaUpload() {
                         <i class="fas fa-times"></i>
                     </button>
                 `;
-            } else if (file.type.startsWith('video/')) {
-                mediaItem.innerHTML = `
-                    <video controls>
-                        <source src="${e.target.result}" type="${file.type}">
-                    </video>
-                    <button type="button" class="remove-btn" onclick="removeMedia(this)">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
             }
             
             mediaPreview.appendChild(mediaItem);
             uploadedMedia.push({
                 file: file,
-                element: mediaItem
+                element: mediaItem,
+                previewUrl: e.target.result
             });
             
             console.log('Media preview added, total:', uploadedMedia.length);
@@ -284,7 +289,7 @@ function initializeMediaUpload() {
     }
 }
 
-// Remove media function (must be global for onclick to work)
+// Remove media function (unchanged)
 function removeMedia(button) {
     const mediaItem = button.parentElement;
     const index = uploadedMedia.findIndex(item => item.element === mediaItem);
@@ -297,49 +302,90 @@ function removeMedia(button) {
     console.log('Media removed, remaining:', uploadedMedia.length);
 }
 
-// Form submission
+// Form submission - UPDATED FOR BACKEND INTEGRATION
 function initializeFormSubmission() {
     const submitBtn = document.getElementById('submitBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
 
-    submitBtn.addEventListener('click', function(e) {
+    submitBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         
-        // Validate form
+        if (!checkAuthentication()) {
+            return;
+        }
+        
         if (!validateForm()) {
             return;
         }
 
-        // Show loading
         loadingOverlay.classList.remove('hidden');
 
-        // Simulate API call
-        setTimeout(() => {
-            const postData = {
-                title: document.getElementById('postTitle').value,
-                content: document.getElementById('postContent').value,
-                category: document.getElementById('postCategory').value,
-                privacy: document.getElementById('postPrivacy').value,
-                tags: document.getElementById('postTags').value.split(',').map(tag => tag.trim()).filter(tag => tag),
-                location: selectedLocation,
-                mediaCount: uploadedMedia.length,
-                media: uploadedMedia.map(item => ({
-                    name: item.file.name,
-                    type: item.file.type,
-                    size: item.file.size
-                }))
-            };
+        try {
+            const hasMedia = uploadedMedia.length > 0;
 
-            console.log('Post Data:', postData);
-            
-            // Hide loading
+            let requestBody;
+            let headers;
+
+            if (hasMedia) {
+                const formData = new FormData();
+                formData.append('title', document.getElementById('postTitle').value.trim());
+                formData.append('content', document.getElementById('postContent').value.trim());
+
+                const rawTags = document.getElementById('postTags').value.trim();
+                if (rawTags) {
+                    formData.append('tags', rawTags);
+                }
+
+                if (selectedLocation) {
+                    formData.append('latitude', selectedLocation.lat);
+                    formData.append('longitude', selectedLocation.lng);
+                }
+
+                formData.append('image', uploadedMedia[0].file);
+
+                console.log('Submitting post with form data');
+                for (const pair of formData.entries()) {
+                    console.log('FormData entry:', pair[0], pair[1]);
+                }
+
+                requestBody = formData;
+                headers = getAuthHeaders(false);
+            } else {
+                const postPayload = {
+                    title: document.getElementById('postTitle').value.trim(),
+                    content: document.getElementById('postContent').value.trim(),
+                    tags: document.getElementById('postTags').value.trim(),
+                    latitude: selectedLocation ? selectedLocation.lat : null,
+                    longitude: selectedLocation ? selectedLocation.lng : null
+                };
+
+                console.log('Submitting post with JSON payload', postPayload);
+
+                requestBody = JSON.stringify(postPayload);
+                headers = getAuthHeaders(true);
+            }
+
+            const response = await fetch(`${API_BASE_URL}/posts`, {
+                method: 'POST',
+                headers,
+                body: requestBody
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to create post');
+            }
+
             loadingOverlay.classList.add('hidden');
+            showSuccessMessage(result.data);
             
-            // Show success
-            showSuccessMessage();
-            
-        }, 3000);
+        } catch (error) {
+            console.error('Error creating post:', error);
+            loadingOverlay.classList.add('hidden');
+            showErrorMessage(error.message);
+        }
     });
 
     cancelBtn.addEventListener('click', function() {
@@ -381,8 +427,8 @@ function validateForm() {
     return true;
 }
 
-// Show success message
-function showSuccessMessage() {
+// Show success message - UPDATED
+function showSuccessMessage(post) {
     const successMsg = document.createElement('div');
     successMsg.style.cssText = `
         position: fixed;
@@ -405,7 +451,7 @@ function showSuccessMessage() {
             <i class="fas fa-check-circle"></i>
         </div>
         <h3 style="color: white; margin-bottom: 15px; font-size: 1.5rem;">Post Published!</h3>
-        <p style="color: #B0C4DE; margin-bottom: 25px;">Your post has been shared successfully.</p>
+        <p style="color: #B0C4DE; margin-bottom: 25px;">Your post "${post.title}" has been shared successfully.</p>
         <div style="display: flex; gap: 15px; justify-content: center;">
             <button onclick="this.parentElement.parentElement.remove(); resetForm();" 
                     style="background: #00e0ff; color: #0D1B2A; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
@@ -421,7 +467,41 @@ function showSuccessMessage() {
     document.body.appendChild(successMsg);
 }
 
-// Reset form
+// Show error message
+function showErrorMessage(message) {
+    const errorMsg = document.createElement('div');
+    errorMsg.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(10, 22, 34, 0.95);
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        border: 2px solid #FF6B6B;
+        box-shadow: 0 20px 50px rgba(255, 107, 107, 0.3);
+        z-index: 10000;
+        backdrop-filter: blur(20px);
+        min-width: 300px;
+    `;
+    
+    errorMsg.innerHTML = `
+        <div style="font-size: 4rem; color: #FF6B6B; margin-bottom: 20px;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 style="color: white; margin-bottom: 15px; font-size: 1.5rem;">Error</h3>
+        <p style="color: #B0C4DE; margin-bottom: 25px;">${message}</p>
+        <button onclick="this.parentElement.parentElement.remove()" 
+                style="background: #FF6B6B; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+            <i class="fas fa-times"></i> Close
+        </button>
+    `;
+    
+    document.body.appendChild(errorMsg);
+}
+
+// Reset form (unchanged)
 function resetForm() {
     document.getElementById('postTitle').value = '';
     document.getElementById('postContent').value = '';
@@ -429,11 +509,9 @@ function resetForm() {
     document.getElementById('postPrivacy').value = 'public';
     document.getElementById('postTags').value = '';
     
-    // Clear media
     document.getElementById('mediaPreview').innerHTML = '';
     uploadedMedia = [];
     
-    // Clear location
     if (locationMarker) {
         map.removeLayer(locationMarker);
         locationMarker = null;
@@ -444,7 +522,6 @@ function resetForm() {
     document.getElementById('longitude').value = '';
     document.getElementById('accuracyIndicator').classList.add('hidden');
     
-    // Reset map view
     map.setView([40.7128, -74.0060], 13);
     
     console.log('Form reset successfully');

@@ -1,10 +1,46 @@
-module.exports = (req,res,next) => {
+const jwt = require('jsonwebtoken');
+const User = require('../models/users');
 
-if(!req.session.user){
+const JWT_SECRET = process.env.JWT_SECRET || 'fallbacksecret';
 
-res.status(401).json({messages:"unauthorised login"})
+const authMiddleware = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization');
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token, authorization denied'
+            });
+        }
 
-}
+        // Remove "Bearer " prefix if present
+        const jwtToken = token.replace('Bearer ', '').trim();
+        
+        // Verify token
+    const decoded = jwt.verify(jwtToken, JWT_SECRET);
+        
+        // Find user and attach to request
+    const userId = decoded.id || decoded.userId;
+    const user = await User.findById(userId).select('-password');
+        
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token is valid but user not found'
+            });
+        }
 
-next()
-}
+        req.user = user;
+        next();
+        
+    } catch (error) {
+        console.error('Auth middleware error:', error);
+        return res.status(401).json({
+            success: false,
+            message: 'Token is not valid'
+        });
+    }
+};
+
+module.exports = authMiddleware;

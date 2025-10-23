@@ -1,6 +1,9 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const User = require('../models/users'); // Model name fixed
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallbacksecret';
 
 require('dotenv').config();
 
@@ -156,22 +159,37 @@ exports.userLogin = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     if (user.password !== password) {
-      return res.status(400).json({ message: "Incorrect password" });
+      return res.status(400).json({ success: false, message: "Incorrect password" });
     }
 
     if (!user.isVerified) {
-      return res.status(400).json({ message: "User not verified" });
+      return res.status(400).json({ success: false, message: "User not verified" });
     }
 
     req.session.user = { id: user._id, email: user.email, name: user.name };
 
-    res.status(200).json({ message: "Login successful" });
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
 
   } catch (error) {
-    res.status(500).json({ message: "Unable to login", error });
+    res.status(500).json({ success: false, message: "Unable to login", error });
   }
 };
 

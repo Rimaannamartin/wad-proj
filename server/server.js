@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const connectDb = require("./config/connect")
 const userRoutes = require('./routes/userRoutes')
+const postRoutes = require('./routes/postRoutes'); // Add post routes
 const session = require("express-session");
-
 
 dotenv.config();
 
@@ -16,35 +16,74 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // for form submissions
 
 app.use(session({
-
-    secret:"supersecreatkey",
-    resave:false,
-    saveUninitialized:true,
-    cookie:{secure:false}
-
-
+    secret: "supersecreatkey",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
 }))
+
 const cors = require("cors");
 app.use(cors({ origin: "http://localhost:5000", credentials: true }));
 
 // Serve static files from client folder
 app.use(express.static(path.join(__dirname, '../client')));
 
+// Serve uploaded files statically (for post images)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Serve index.html as root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
-app.use('/api/v1/userAuth',userRoutes)
+// API Routes
+app.use('/api/v1/userAuth', userRoutes);
+app.use('/api/v1/posts', postRoutes); // Add post routes
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  
+  // Multer file size error
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File too large. Maximum size is 5MB.'
+    });
+  }
+  
+  // Multer file type error
+  if (err.message === 'Only image files are allowed!') {
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
 
-
-app.listen(PORT, (error) => {
-    console.log(error);
-    
-    console.log(`Server running successfully at port ${PORT}`);
-    
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'production' ? {} : err.message
+  });
 });
 
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'API route not found'
+  });
+});
 
+// For client-side routing - serve index.html for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
 
+app.listen(PORT, (error) => {
+    if (error) {
+        console.log('Server error:', error);
+    } else {
+        console.log(`Server running successfully at port ${PORT}`);
+    }
+});
