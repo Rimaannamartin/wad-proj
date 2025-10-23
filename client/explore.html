@@ -3,75 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Investor Connect - Explore</title>
+  <title>GeoShare - Explore Opportunities</title>
   <link rel="stylesheet" href="./assets/css/explore.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <header>
-    <h1 class="site-title">Investor Connect</h1>
+  <!-- Animated Background -->
+  <div class="animated-bg"></div>
 
-    <!-- Tabs directly under title -->
-    <div class="tabs">
-      <input type="text" id="startupSearch" placeholder="Search startups...">
-      <input type="text" id="location" placeholder="Search location...">
-      <select id="category" aria-label="Category" title="Category">
-        <option>Technology</option>
-        <option>Real Estate</option>
-        <option>Healthcare</option>
-        <option>Finance</option>
-        <option>Energy</option>
-      </select>
-      <button class="search-btn">Search</button>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-handshake"></i>
+      </div>
+      <div class="brand-text">
+        <div class="logo-text">GeoShare</div>
+        <div class="tag">Connect & Collaborate</div>
+      </div>
     </div>
-  </header>
+    
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a href="explore.html" class="nav-link active">
+        <i class="fas fa-compass"></i>
+        <span>Explore</span>
+      </a>
+      <a href="AddPost.html" class="nav-link accent">
+        <i class="fas fa-plus-circle"></i>
+        <span>Create Post</span>
+      </a>
+      <a href="profile.html" class="nav-link">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </a>
+    </div>
+  </nav>
 
-  <main>
-    <section class="cards-container" id="cardsContainer">
-      <!-- Card 1 -->
-      <div class="card">
-        <div class="media">
-          <img src="startup1.jpg" alt="Startup 1">
+  <!-- Main Content -->
+  <main class="explore-main">
+    <!-- Header Section -->
+    <section class="explore-header">
+      <h1 class="site-title">
+        <i class="fas fa-globe-americas"></i>
+        Explore Opportunities
+      </h1>
+      <p class="header-subtitle">Discover connections and collaborations in your area</p>
+      
+      <!-- Simple Filters -->
+      <div class="filters-container">
+        <div class="filter-group">
+          <div class="input-with-icon">
+            <i class="fas fa-map-marker-alt"></i>
+            <input type="text" id="locationFilter" placeholder="Search location...">
+          </div>
         </div>
-        <h3>FinTech Pro</h3>
-        <p>AI-powered financial insights platform helping SMEs manage cash flow effectively.</p>
-        <div class="actions">
-          <button>Request Pitch Deck</button>
-          <button>Connect</button>
-          <button>Save</button>
+        
+        <div class="filter-group">
+          <select id="categoryFilter" class="styled-select">
+            <option value="">All Categories</option>
+            <option value="business">💼 Business</option>
+            <option value="collaboration">🤝 Collaboration</option>
+            <option value="investment">💰 Investment</option>
+            <option value="networking">🌐 Networking</option>
+            <option value="partnership">⚡ Partnership</option>
+          </select>
         </div>
+        
+        <button class="filter-btn primary" id="applyFilters">
+          <i class="fas fa-search"></i>
+          Search
+        </button>
+        
+        <button class="filter-btn secondary" id="clearFilters">
+          <i class="fas fa-times"></i>
+          Clear
+        </button>
+      </div>
+    </section>
+
+    <!-- Posts Grid -->
+    <section class="posts-section">
+      <!-- Loading State -->
+      <div class="loading-section" id="loadingSection">
+        <div class="loading-spinner"></div>
+        <p>Loading opportunities...</p>
       </div>
 
-      <!-- Card 2 -->
-      <div class="card">
-        <div class="media">
-          <video controls>
-            <source src="startup2.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-        </div>
-        <h3>HealthTrack</h3>
-        <p>Wearable tech startup focused on real-time patient monitoring and analytics.</p>
-        <div class="actions">
-          <button>Request Pitch Deck</button>
-          <button>Connect</button>
-          <button>Save</button>
-        </div>
+      <!-- Posts Container -->
+      <div class="posts-container" id="postsContainer">
+        <!-- Posts will be dynamically loaded here -->
       </div>
 
-      <!-- Card 3 -->
-      <div class="card">
-        <div class="media">
-          <img src="startup3.jpg" alt="Startup 3">
-        </div>
-        <h3>EduSmart</h3>
-        <p>Next-gen edtech startup delivering personalized learning with AI tutors.</p>
-        <div class="actions">
-          <button>Request Pitch Deck</button>
-          <button>Connect</button>
-          <button>Save</button>
-        </div>
+      <!-- Load More Button -->
+      <div class="load-more-container">
+        <button class="load-more-btn" id="loadMoreBtn">
+          <i class="fas fa-sync-alt"></i>
+          Load More
+        </button>
+      </div>
+
+      <!-- No Results -->
+      <div class="no-results hidden" id="noResults">
+        <i class="fas fa-search"></i>
+        <h3>No opportunities found</h3>
+        <p>Try adjusting your filters or <a href="AddPost.html">create the first post</a></p>
       </div>
     </section>
   </main>
+
+  <!-- Meeting Request Modal -->
+  <div class="modal hidden" id="meetingModal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-calendar-check"></i> Request Meeting</h3>
+        <button class="close-modal" id="closeMeetingModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="meetingForm">
+          <div class="form-group">
+            <label for="meetingDate">Preferred Date</label>
+            <input type="date" id="meetingDate" required>
+          </div>
+          <div class="form-group">
+            <label for="meetingTime">Preferred Time</label>
+            <input type="time" id="meetingTime" required>
+          </div>
+          <div class="form-group">
+            <label for="meetingMessage">Message</label>
+            <textarea id="meetingMessage" placeholder="Briefly describe what you'd like to discuss..." rows="4" required></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">
+              <i class="fas fa-paper-plane"></i>
+              Send Request
+            </button>
+            <button type="button" class="btn-secondary" id="cancelMeeting">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comments Modal -->
+  <div class="modal hidden" id="commentsModal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-comments"></i> Comments</h3>
+        <button class="close-modal" id="closeCommentsModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="comments-list" id="commentsList">
+          <!-- Comments will be loaded here -->
+        </div>
+        <div class="add-comment">
+          <textarea id="commentText" placeholder="Add a comment..." rows="3"></textarea>
+          <button class="btn-primary" id="submitComment">
+            <i class="fas fa-paper-plane"></i>
+            Post Comment
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./assets/js/explore.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ const asyncHandler = require('express-async-handler');
 // @access  Private
 const createPost = asyncHandler(async (req, res) => {
   console.log('Incoming createPost body:', req.body);
-  const { title, content, tags, latitude, longitude } = req.body;
+  const { title, content, tags, latitude, longitude, address } = req.body;
 
   let normalizedTags = [];
   if (Array.isArray(tags)) {
@@ -29,22 +29,26 @@ const createPost = asyncHandler(async (req, res) => {
   // Create post
   const latNum = latitude !== undefined && latitude !== null ? parseFloat(latitude) : null;
   const lngNum = longitude !== undefined && longitude !== null ? parseFloat(longitude) : null;
-  const hasValidLocation =
-    Number.isFinite(latNum) && Number.isFinite(lngNum);
+  const hasValidLocation = Number.isFinite(latNum) && Number.isFinite(lngNum);
 
-  const post = await Post.create({
+  const postData = {
     title,
     content,
     author: req.user._id,
     imageUrl: req.file ? `/uploads/images/${req.file.filename}` : null,
-    tags: normalizedTags,
-    location: hasValidLocation
-      ? {
-          type: 'Point',
-          coordinates: [lngNum, latNum]
-        }
-      : undefined
-  });
+    tags: normalizedTags
+  };
+
+  // Add location if valid
+  if (hasValidLocation) {
+    postData.location = {
+      type: 'Point',
+      coordinates: [lngNum, latNum],
+      address: address || null
+    };
+  }
+
+  const post = await Post.create(postData);
 
   // Populate author details
   await post.populate('author', 'username profilePicture firstName lastName');
@@ -78,59 +82,142 @@ const getPosts = asyncHandler(async (req, res) => {
     query.author = req.query.author;
   }
 
-  // Search in title and content
+  // Filter by category (using tags)
+  if (req.query.category) {
+    query.tags = { $in: [req.query.category] };
+  }
+
+  // Search in title, content, and tags
   if (req.query.search) {
     query.$or = [
       { title: { $regex: req.query.search, $options: 'i' } },
-      { content: { $regex: req.query.search, $options: 'i' } }
+      { content: { $regex: req.query.search, $options: 'i' } },
+      { tags: { $in: [new RegExp(req.query.search, 'i')] } }
     ];
   }
 
-  // Get posts with pagination
-  const posts = await Post.find(query)
-    .populate('author', 'username profilePicture firstName lastName')
-    .populate('likes', 'username profilePicture firstName lastName')
-    .populate('comments.user', 'username profilePicture firstName lastName')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  // Location filter - search in location address
+  if (req.query.location) {
+    query['location.address'] = { $regex: req.query.location, $options: 'i' };
+  }
 
-  // Get total count for pagination
-  const total = await Post.countDocuments(query);
-  const totalPages = Math.ceil(total / limit);
+  console.log('Database Query:', query); // Debug log
 
-  res.json({
-    success: true,
-    data: posts,
-    pagination: {
-      current: page,
-      total: totalPages,
-      count: posts.length,
-      totalItems: total
-    }
-  });
+  try {
+    // Get posts with pagination
+    const posts = await Post.find(query)
+      .populate('author', 'username profilePicture firstName lastName')
+      .populate('likes', 'username profilePicture firstName lastName')
+      .populate('comments.user', 'username profilePicture firstName lastName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Transform posts for frontend
+    const transformedPosts = posts.map(post => {
+      const postObj = post.toObject ? post.toObject() : { ...post };
+      
+      // Convert GeoJSON coordinates to latitude/longitude for frontend
+      if (postObj.location && postObj.location.coordinates && postObj.location.coordinates.length === 2) {
+        postObj.location = {
+          longitude: postObj.location.coordinates[0],
+          latitude: postObj.location.coordinates[1],
+          address: postObj.location.address || null
+        };
+      } else if (postObj.location && postObj.location.coordinates) {
+        // Handle case where location exists but coordinates are invalid
+        postObj.location = {
+          longitude: null,
+          latitude: null,
+          address: postObj.location.address || null
+        };
+      }
+      
+      // Ensure likeCount and commentCount exist
+      if (!postObj.likeCount && postObj.likes) {
+        postObj.likeCount = postObj.likes.length;
+      }
+      
+      if (!postObj.commentCount && postObj.comments) {
+        postObj.commentCount = postObj.comments.length;
+      }
+      
+      return postObj;
+    });
+
+    // Get total count for pagination
+    const total = await Post.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data: transformedPosts,
+      pagination: {
+        current: page,
+        total: totalPages,
+        count: transformedPosts.length,
+        totalItems: total
+      }
+    });
+  } catch (error) {
+    console.error('Error in getPosts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching posts',
+      error: error.message
+    });
+  }
 });
 
 // @desc    Get single post by ID
 // @route   GET /api/v1/posts/:id
 // @access  Public
 const getPostById = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id)
-    .populate('author', 'username profilePicture firstName lastName')
-    .populate('likes', 'username profilePicture firstName lastName')
-    .populate('comments.user', 'username profilePicture firstName lastName');
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate('author', 'username profilePicture firstName lastName')
+      .populate('likes', 'username profilePicture firstName lastName')
+      .populate('comments.user', 'username profilePicture firstName lastName');
 
-  if (!post) {
-    return res.status(404).json({
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    // Transform location data for frontend
+    const postObj = post.toObject ? post.toObject() : { ...post };
+    
+    if (postObj.location && postObj.location.coordinates && postObj.location.coordinates.length === 2) {
+      postObj.location = {
+        longitude: postObj.location.coordinates[0],
+        latitude: postObj.location.coordinates[1],
+        address: postObj.location.address || null
+      };
+    }
+
+    // Ensure virtual fields exist
+    if (!postObj.likeCount && postObj.likes) {
+      postObj.likeCount = postObj.likes.length;
+    }
+    
+    if (!postObj.commentCount && postObj.comments) {
+      postObj.commentCount = postObj.comments.length;
+    }
+
+    res.json({
+      success: true,
+      data: postObj
+    });
+  } catch (error) {
+    console.error('Error in getPostById:', error);
+    res.status(500).json({
       success: false,
-      message: 'Post not found'
+      message: 'Error fetching post',
+      error: error.message
     });
   }
-
-  res.json({
-    success: true,
-    data: post
-  });
 });
 
 // @desc    Update post
@@ -154,22 +241,54 @@ const updatePost = asyncHandler(async (req, res) => {
     });
   }
 
-  const { title, content, tags } = req.body;
+  const { title, content, tags, latitude, longitude, address } = req.body;
 
   // Update fields
   if (title) post.title = title;
   if (content) post.content = content;
-  if (tags) post.tags = tags.split(',').map(tag => tag.trim());
+  
+  if (tags) {
+    if (Array.isArray(tags)) {
+      post.tags = tags.map(tag => tag.trim()).filter(Boolean);
+    } else if (typeof tags === 'string') {
+      post.tags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+    }
+  }
+  
   if (req.file) post.imageUrl = `/uploads/images/${req.file.filename}`;
+
+  // Update location if provided
+  if (latitude !== undefined && longitude !== undefined) {
+    const latNum = parseFloat(latitude);
+    const lngNum = parseFloat(longitude);
+    
+    if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+      post.location = {
+        type: 'Point',
+        coordinates: [lngNum, latNum],
+        address: address || post.location?.address || null
+      };
+    }
+  }
 
   await post.save();
 
   // Populate author details
   await post.populate('author', 'username profilePicture firstName lastName');
 
+  // Transform location for response
+  const postObj = post.toObject ? post.toObject() : { ...post };
+  if (postObj.location && postObj.location.coordinates) {
+    postObj.location = {
+      longitude: postObj.location.coordinates[0],
+      latitude: postObj.location.coordinates[1],
+      address: postObj.location.address || null
+    };
+  }
+
   res.json({
     success: true,
-    data: post,
+    data: postObj,
     message: 'Post updated successfully'
   });
 });
@@ -226,7 +345,10 @@ const likePost = asyncHandler(async (req, res) => {
     
     res.json({
       success: true,
-      data: { liked: false, likeCount: post.likes.length },
+      data: { 
+        liked: false, 
+        likeCount: post.likes.length 
+      },
       message: 'Post unliked successfully'
     });
   } else {
@@ -236,7 +358,10 @@ const likePost = asyncHandler(async (req, res) => {
     
     res.json({
       success: true,
-      data: { liked: true, likeCount: post.likes.length },
+      data: { 
+        liked: true, 
+        likeCount: post.likes.length 
+      },
       message: 'Post liked successfully'
     });
   }
@@ -329,6 +454,57 @@ const deleteComment = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Request meeting for a post
+// @route   POST /api/v1/posts/:id/meeting
+// @access  Private
+const requestMeeting = asyncHandler(async (req, res) => {
+  const { date, time, message } = req.body;
+  
+  if (!date || !time || !message) {
+    return res.status(400).json({
+      success: false,
+      message: 'Date, time, and message are required'
+    });
+  }
+
+  const post = await Post.findById(req.params.id);
+  
+  if (!post) {
+    return res.status(404).json({
+      success: false,
+      message: 'Post not found'
+    });
+  }
+
+  // In a real application, you would:
+  // 1. Save meeting request to database
+  // 2. Send email notification to post author
+  // 3. Notify both parties
+  
+  console.log('Meeting request received:', {
+    postId: req.params.id,
+    requestedBy: req.user._id,
+    date,
+    time,
+    message
+  });
+
+  res.json({
+    success: true,
+    message: 'Meeting request sent successfully',
+    data: {
+      meeting: {
+        date,
+        time,
+        message,
+        requestedBy: req.user._id,
+        post: post._id,
+        postAuthor: post.author
+      }
+    }
+  });
+});
+
 module.exports = {
   createPost,
   getPosts,
@@ -337,5 +513,6 @@ module.exports = {
   deletePost,
   likePost,
   addComment,
-  deleteComment
+  deleteComment,
+  requestMeeting
 };
