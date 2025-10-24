@@ -684,60 +684,27 @@ body {
 }
 
 /* Comments Styles */
-.comments-list {
-  max-height: 300px;
-  overflow-y: auto;
-  margin-bottom: 1.5rem;
+/* Remove comments modal styles - add this to your existing CSS */
+#commentsModal {
+    display: none !important;
 }
 
-.comment-item {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border);
+/* Update action buttons styles */
+.action-btn.connect-btn {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border: none;
 }
 
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+.action-btn.connect-btn:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
 }
 
-.comment-author {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.comment-time {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.comment-content {
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.add-comment {
-  border-top: 1px solid var(--border);
-  padding-top: 1.5rem;
-}
-
-.add-comment textarea {
-  width: 100%;
-  padding: 12px 15px;
-  border: 2px solid rgba(176, 196, 222, 0.2);
-  border-radius: 8px;
-  background: rgba(13, 27, 42, 0.6);
-  color: var(--text);
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  resize: vertical;
-}
-
-.add-comment textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 224, 255, 0.2);
-  outline: none;
+/* Remove like button styles if they exist */
+.like-btn, .comment-btn {
+    display: none !important;
 }
 
 /* Utility Classes */
@@ -795,4 +762,73 @@ body {
     width: 95%;
     margin: 1rem;
   }
+}
+/* Place Search Styles */
+.place-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.place-result {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.place-result:hover {
+    background: rgba(0, 224, 255, 0.1);
+}
+
+.place-result:last-child {
+    border-bottom: none;
+}
+
+.place-name {
+    color: var(--text);
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.place-type {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: capitalize;
+}
+
+.search-loading, .search-error, .no-results {
+    padding: 15px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.search-error {
+    color: var(--accent);
+}
+
+/* Make sure the search input container is positioned relatively */
+.form-group {
+    position: relative;
+}
+
+/* Update existing input styles to accommodate search */
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon input {
+    padding-left: 45px !important;
 }

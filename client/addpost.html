@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Post | GeoShare</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./assets/css/AddPost.css">
@@ -13,10 +14,42 @@
     <!-- Animated Background -->
     <div class="animated-bg"></div>
 
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fas fa-handshake"></i>
+            </div>
+            <div class="brand-text">
+                <div class="logo-text">GeoShare</div>
+                <div class="tag">Connect & Collaborate</div>
+            </div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="explore.html" class="nav-link">
+                <i class="fas fa-compass"></i>
+                <span>Explore</span>
+            </a>
+            <a href="AddPost.html" class="nav-link active accent">
+                <i class="fas fa-plus-circle"></i>
+                <span>Create Post</span>
+            </a>
+            <a href="profile.html" class="nav-link">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="header-section">
             <h1><i class="fas fa-plus-circle"></i> Create New Post</h1>
-            <p>Share your moments with the world</p>
+            <p>Share opportunities and connect with others in your area</p>
         </div>
 
         <div class="post-creator">
@@ -30,13 +63,13 @@
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-content">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <h4>Drop images or videos here</h4>
-                            <p>Supports JPG, PNG, MP4, MOV (Max 50MB)</p>
+                            <h4>Drop an image or video</h4>
+                            <p>Supports JPG, PNG, GIF (≤5MB) or MP4, WEBM, MOV, AVI, MKV (≤50MB)</p>
                             <button type="button" class="browse-btn" id="browseBtn">
                                 <i class="fas fa-folder-open"></i> Browse Files
                             </button>
                         </div>
-                        <input type="file" id="mediaInput" multiple accept="image/*,video/*" hidden>
+                        <input type="file" id="mediaInput" accept="image/*,video/*" hidden>
                     </div>
                     <div class="media-preview" id="mediaPreview"></div>
                 </div>
@@ -50,18 +83,18 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="postTitle">Post Title</label>
+                    <label for="postTitle">Opportunity Title</label>
                     <div class="input-with-icon">
                         <i class="fas fa-heading"></i>
-                        <input type="text" id="postTitle" placeholder="Give your post an engaging title" required>
+                        <input type="text" id="postTitle" placeholder="e.g., Business Partnership Opportunity, Looking for Collaborators..." required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="postContent">Your Story</label>
+                    <label for="postContent">Description</label>
                     <div class="textarea-with-icon">
                         <i class="fas fa-pen"></i>
-                        <textarea id="postContent" placeholder="Share your experience, thoughts, or story..." rows="5" required></textarea>
+                        <textarea id="postContent" placeholder="Describe the opportunity, what you're looking for, requirements, benefits..." rows="5" required></textarea>
                     </div>
                 </div>
 
@@ -72,22 +105,24 @@
                             <i class="fas fa-tag"></i>
                             <select id="postCategory" required>
                                 <option value="">Choose a category</option>
-                                <option value="travel">🌍 Travel & Adventure</option>
-                                <option value="food">🍕 Food & Dining</option>
-                                <option value="nature">🏞️ Nature & Outdoors</option>
-                                <option value="urban">🏙️ Urban Exploration</option>
-                                <option value="events">🎉 Events & Activities</option>
+                                <option value="business">💼 Business</option>
+                                <option value="collaboration">🤝 Collaboration</option>
+                                <option value="investment">💰 Investment</option>
+                                <option value="networking">🌐 Networking</option>
+                                <option value="partnership">⚡ Partnership</option>
+                                <option value="mentorship">🎯 Mentorship</option>
+                                <option value="event">🎉 Event</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="postPrivacy">Privacy</label>
+                        <label for="postPrivacy">Visibility</label>
                         <div class="select-with-icon">
                             <i class="fas fa-globe-americas"></i>
                             <select id="postPrivacy">
                                 <option value="public">🌐 Public</option>
-                                <option value="friends">👥 Friends Only</option>
+                                <option value="friends">👥 Connections Only</option>
                                 <option value="private">🔒 Private</option>
                             </select>
                         </div>
@@ -98,7 +133,7 @@
                     <label for="postTags">Tags</label>
                     <div class="input-with-icon">
                         <i class="fas fa-hashtag"></i>
-                        <input type="text" id="postTags" placeholder="Add tags separated by commas (e.g., sunset, beach, vacation)">
+                        <input type="text" id="postTags" placeholder="Add relevant tags separated by commas (e.g., startup, tech, funding, collaboration)">
                     </div>
                 </div>
             </div>
@@ -107,48 +142,54 @@
             <div class="section">
                 <div class="section-header">
                     <i class="fas fa-map-marker-alt"></i>
-                    <h3>Add Location</h3>
+                    <h3>Location</h3>
                 </div>
                 
-                <div class="location-section">
-                    <div class="map-container">
-                        <div id="locationMap"></div>
-                        <div class="map-overlay" id="mapOverlay">
-                            <div class="map-overlay-content">
-                                <div class="map-overlay-spinner"></div>
-                                <h4>Detecting Your Location</h4>
-                                <p>Please allow location access in your browser</p>
-                            </div>
+                <div class="location-instruction">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Search for a location or click on the map to set the position for your opportunity</p>
+                </div>
+                
+                <div class="map-container">
+                    <div id="locationMap"></div>
+                    <div class="map-overlay" id="mapOverlay">
+                        <div class="map-overlay-content">
+                            <div class="map-overlay-spinner"></div>
+                            <h4>Detecting Your Location</h4>
+                            <p>Please allow location access in your browser</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-controls">
+                    <button type="button" id="detectLocation" class="location-btn pulse">
+                        <i class="fas fa-crosshairs"></i>
+                        Use My Current Location
+                    </button>
+                    
+                    <div class="coordinates-grid">
+                        <div class="coordinate-input">
+                            <label>Latitude</label>
+                            <input type="text" id="latitude" placeholder="0.000000" readonly>
+                        </div>
+                        <div class="coordinate-input">
+                            <label>Longitude</label>
+                            <input type="text" id="longitude" placeholder="0.000000" readonly>
                         </div>
                     </div>
                     
-                    <div class="location-controls">
-                        <button type="button" id="detectLocation" class="location-btn pulse">
-                            <i class="fas fa-crosshairs"></i>
-                            Detect My Location
-                        </button>
-                        
-                        <div class="coordinates-grid">
-                            <div class="coordinate-input">
-                                <label>Latitude</label>
-                                <input type="text" id="latitude" placeholder="0.000000" readonly>
-                            </div>
-                            <div class="coordinate-input">
-                                <label>Longitude</label>
-                                <input type="text" id="longitude" placeholder="0.000000" readonly>
-                            </div>
-                        </div>
-                        
-                        <div class="accuracy-indicator hidden" id="accuracyIndicator">
-                            <div class="accuracy-dot"></div>
-                            <span class="accuracy-text">High accuracy location detected</span>
-                        </div>
-                        
-                        <div class="location-info-card">
-                            <i class="fas fa-info-circle"></i>
-                            <p id="locationAddress">Click on the map or use location detection to set your post location</p>
-                        </div>
+                    <div class="accuracy-indicator hidden" id="accuracyIndicator">
+                        <div class="accuracy-dot"></div>
+                        <span class="accuracy-text">High accuracy location detected</span>
                     </div>
+                    
+                    <div class="location-info-card">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p id="locationAddress">Search for a location or click on the map to set position</p>
+                    </div>
+
+                    <!-- Hidden input to store place name -->
+                    <input type="hidden" id="placeName">
                 </div>
             </div>
 
@@ -156,7 +197,7 @@
             <div class="form-actions">
                 <button type="submit" class="submit-btn" id="submitBtn">
                     <i class="fas fa-paper-plane"></i>
-                    Publish Post
+                    Publish Opportunity
                 </button>
                 <button type="button" class="cancel-btn" id="cancelBtn">
                     <i class="fas fa-times"></i>
@@ -169,10 +210,11 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay hidden" id="loadingOverlay">
         <div class="loading-spinner"></div>
-        <p>Creating your post...</p>
+        <p>Creating your opportunity post...</p>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./assets/js/Addpost.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="./assets/js/AddPost.js"></script>
 </body>
 </html>

@@ -6,10 +6,8 @@ class ExplorePage {
         this.hasMore = true;
         this.isLoading = false;
         this.filters = {
-            search: '',
             location: '',
-            category: '',
-            tags: ''
+            category: ''
         };
         this.currentPostId = null;
         
@@ -44,47 +42,22 @@ class ExplorePage {
         document.getElementById('clearFilters').addEventListener('click', () => this.clearFilters());
         document.getElementById('loadMoreBtn').addEventListener('click', () => this.loadMorePosts());
         
-        // Modal events
-        const closeModalBtn = document.getElementById('closeModal');
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => this.closeLocationModal());
-        }
-
-        // Enter key support for search
-        const postSearch = document.getElementById('postSearch');
-        const locationSearch = document.getElementById('locationSearch');
+        // Meeting modal events
+        document.getElementById('closeMeetingModal').addEventListener('click', () => this.closeMeetingModal());
+        document.getElementById('cancelMeeting').addEventListener('click', () => this.closeMeetingModal());
         
-        if (postSearch) {
-            postSearch.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.applyFilters();
-            });
-        }
-        
-        if (locationSearch) {
-            locationSearch.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.applyFilters();
-            });
-        }
-
         // Close modal on backdrop click
-        const locationModal = document.getElementById('locationModal');
-        if (locationModal) {
-            locationModal.addEventListener('click', (e) => {
-                if (e.target.id === 'locationModal') this.closeLocationModal();
-            });
-        }
+        document.getElementById('meetingModal').addEventListener('click', (e) => {
+            if (e.target.id === 'meetingModal') this.closeMeetingModal();
+        });
 
         // Meeting request form
-        const meetingForm = document.getElementById('meetingForm');
-        if (meetingForm) {
-            meetingForm.addEventListener('submit', (e) => this.submitMeetingRequest(e));
-        }
+        document.getElementById('meetingForm').addEventListener('submit', (e) => this.submitMeetingRequest(e));
 
-        // Comments
-        const submitCommentBtn = document.getElementById('submitComment');
-        if (submitCommentBtn) {
-            submitCommentBtn.addEventListener('click', () => this.submitComment());
-        }
+        // Enter key support for location search
+        document.getElementById('locationFilter').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.applyFilters();
+        });
     }
 
     async loadPosts() {
@@ -100,10 +73,8 @@ class ExplorePage {
             };
 
             // Add filters if they have values
-            if (this.filters.search) params.search = this.filters.search;
             if (this.filters.location) params.location = this.filters.location;
             if (this.filters.category) params.category = this.filters.category;
-            if (this.filters.tags) params.tags = this.filters.tags;
 
             const queryParams = new URLSearchParams(params);
             const response = await fetch(`http://localhost:5000/api/v1/posts?${queryParams}`);
@@ -121,7 +92,7 @@ class ExplorePage {
                     this.posts = [...this.posts, ...(result.data || [])];
                 }
                 
-                // Handle pagination - adjust based on your API response structure
+                // Handle pagination
                 this.hasMore = result.data && result.data.length > 0;
                 if (result.pagination) {
                     this.hasMore = this.currentPage < result.pagination.total;
@@ -148,10 +119,8 @@ class ExplorePage {
 
     applyFilters() {
         this.filters = {
-            search: document.getElementById('postSearch')?.value.trim() || '',
-            location: document.getElementById('locationSearch')?.value.trim() || '',
-            category: document.getElementById('categoryFilter')?.value || '',
-            tags: ''
+            location: document.getElementById('locationFilter').value.trim(),
+            category: document.getElementById('categoryFilter').value
         };
         
         this.currentPage = 1;
@@ -160,15 +129,12 @@ class ExplorePage {
     }
 
     clearFilters() {
-        if (document.getElementById('postSearch')) document.getElementById('postSearch').value = '';
-        if (document.getElementById('locationSearch')) document.getElementById('locationSearch').value = '';
-        if (document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = '';
+        document.getElementById('locationFilter').value = '';
+        document.getElementById('categoryFilter').value = '';
         
         this.filters = {
-            search: '',
             location: '',
-            category: '',
-            tags: ''
+            category: ''
         };
         
         this.currentPage = 1;
@@ -208,33 +174,30 @@ class ExplorePage {
         const title = post.title || 'Untitled';
         const content = post.content || '';
         const imageUrl = post.imageUrl ? `http://localhost:5000${post.imageUrl}` : '';
+        const videoUrl = post.videoUrl ? `http://localhost:5000${post.videoUrl}` : '';
         const tags = post.tags || [];
         const author = post.author || {};
-        const likes = post.likes || [];
-        const likeCount = post.likeCount || post.likes?.length || 0;
-        const commentCount = post.commentCount || post.comments?.length || 0;
         const location = post.location || null;
-        
-        postDiv.innerHTML = `
-            ${imageUrl ? `
+        const mediaMarkup = videoUrl ? `
+                <div class="post-media">
+                    <video src="${videoUrl}" controls playsinline preload="metadata"></video>
+                </div>
+            ` : imageUrl ? `
                 <div class="post-media">
                     <img src="${imageUrl}" alt="${this.escapeHtml(title)}" onerror="this.style.display='none'">
                 </div>
-            ` : ''}
+            ` : '';
+        
+        postDiv.innerHTML = `
+            ${mediaMarkup}
             
             <div class="post-content">
                 <div class="post-header">
                     <h3 class="post-title">${this.escapeHtml(title)}</h3>
                     <div class="post-actions">
-                        <button class="action-btn like-btn ${likes.includes(this.getCurrentUserId()) ? 'liked' : ''}" 
-                                onclick="explorePage.likePost('${post._id}')">
-                            <i class="fas fa-heart"></i>
-                            <span>${likeCount}</span>
-                        </button>
-                        
-                        <button class="action-btn comment-btn" onclick="explorePage.showComments('${post._id}')">
-                            <i class="fas fa-comment"></i>
-                            <span>${commentCount}</span>
+                        <button class="action-btn connect-btn" onclick="explorePage.connectUser('${post.author?._id || ''}')">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Connect</span>
                         </button>
                         
                         <button class="action-btn meeting-btn" onclick="explorePage.requestMeeting('${post._id}')">
@@ -276,14 +239,19 @@ class ExplorePage {
         return postDiv;
     }
 
-    async likePost(postId) {
+    async connectUser(userId) {
         if (!this.checkAuthentication()) {
-            alert('Please login to like posts');
+            alert('Please login to connect with users');
+            return;
+        }
+
+        if (!userId) {
+            this.showError('Cannot connect with this user');
             return;
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/api/v1/posts/${postId}/like`, {
+            const response = await fetch(`http://localhost:5000/api/v1/users/${userId}/connect`, {
                 method: 'POST',
                 headers: this.getAuthHeaders()
             });
@@ -291,22 +259,13 @@ class ExplorePage {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                // Update the like count visually
-                const likeBtns = document.querySelectorAll(`.like-btn[onclick="explorePage.likePost('${postId}')"]`);
-                likeBtns.forEach(likeBtn => {
-                    likeBtn.classList.toggle('liked');
-                    const likeCount = result.data.likeCount || 0;
-                    likeBtn.innerHTML = `<i class="fas fa-heart"></i><span>${likeCount}</span>`;
-                });
-                
-                // Show success message
-                this.showSuccess('Post liked!');
+                this.showSuccess('Connection request sent successfully!');
             } else {
-                throw new Error(result.message || 'Failed to like post');
+                throw new Error(result.message || 'Failed to send connection request');
             }
         } catch (error) {
-            console.error('Error liking post:', error);
-            this.showError('Failed to like post. Please try again.');
+            console.error('Error sending connection request:', error);
+            this.showError('Failed to send connection request. Please try again.');
         }
     }
 
@@ -324,9 +283,6 @@ class ExplorePage {
         const modal = document.getElementById('meetingModal');
         if (modal) {
             modal.classList.remove('hidden');
-        } else {
-            // Fallback if modal doesn't exist
-            alert('Meeting request feature would open here');
         }
     }
 
@@ -350,9 +306,9 @@ class ExplorePage {
             return;
         }
 
-        const date = document.getElementById('meetingDate')?.value;
-        const time = document.getElementById('meetingTime')?.value;
-        const message = document.getElementById('meetingMessage')?.value;
+        const date = document.getElementById('meetingDate').value;
+        const time = document.getElementById('meetingTime').value;
+        const message = document.getElementById('meetingMessage').value;
 
         if (!date || !time || !message) {
             this.showError('Please fill all meeting details');
@@ -371,168 +327,12 @@ class ExplorePage {
             if (response.ok && result.success) {
                 this.showSuccess('Meeting request sent successfully!');
                 this.closeMeetingModal();
-                
-                // Reset form
-                if (document.getElementById('meetingForm')) {
-                    document.getElementById('meetingForm').reset();
-                }
             } else {
                 throw new Error(result.message || 'Failed to send meeting request');
             }
         } catch (error) {
             console.error('Error sending meeting request:', error);
             this.showError('Failed to send meeting request. Please try again.');
-        }
-    }
-
-    async showComments(postId) {
-        if (!this.checkAuthentication()) {
-            alert('Please login to view comments');
-            return;
-        }
-
-        try {
-            this.currentPostId = postId;
-            const response = await fetch(`http://localhost:5000/api/v1/posts/${postId}`);
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                const commentInput = document.getElementById('commentText');
-                if (commentInput) {
-                    commentInput.value = '';
-                }
-
-                const commentCount = result.data.commentCount ?? (result.data.comments ? result.data.comments.length : 0);
-                this.posts = this.posts.map(post => {
-                    if (post._id === postId) {
-                        return {
-                            ...post,
-                            comments: result.data.comments,
-                            commentCount
-                        };
-                    }
-                    return post;
-                });
-                this.updateCommentCountUI(postId, commentCount);
-                this.displayComments(result.data);
-            } else {
-                throw new Error(result.message || 'Failed to load comments');
-            }
-        } catch (error) {
-            console.error('Error loading comments:', error);
-            this.showError('Failed to load comments. Please try again.');
-        }
-    }
-
-    displayComments(post) {
-        const modal = document.getElementById('commentsModal');
-        const commentsList = document.getElementById('commentsList');
-        
-        if (modal && commentsList) {
-            const comments = post.comments || [];
-            commentsList.innerHTML = comments.map(comment => `
-                <div class="comment-item">
-                    <div class="comment-header">
-                        <span class="comment-author">${this.getCommentAuthor(comment.user)}</span>
-                        <span class="comment-time">${this.formatDate(comment.createdAt)}</span>
-                    </div>
-                    <div class="comment-content">${this.escapeHtml(comment.content)}</div>
-                </div>
-            `).join('');
-            
-            modal.classList.remove('hidden');
-        } else {
-            // Fallback
-            alert(`Comments for post: ${post.comments?.length || 0} comments`);
-        }
-    }
-
-    closeCommentsModal() {
-        const modal = document.getElementById('commentsModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-        const commentInput = document.getElementById('commentText');
-        if (commentInput) {
-            commentInput.value = '';
-        }
-        this.currentPostId = null;
-    }
-
-    async submitComment() {
-        if (!this.checkAuthentication()) {
-            alert('Please login to comment on posts');
-            return;
-        }
-
-        const commentInput = document.getElementById('commentText');
-        const content = commentInput?.value.trim();
-
-        if (!content) {
-            this.showError('Please enter a comment');
-            return;
-        }
-
-        if (!this.currentPostId) {
-            this.showError('No post selected for commenting');
-            return;
-        }
-
-        const postId = this.currentPostId;
-
-        try {
-            const response = await fetch(`http://localhost:5000/api/v1/posts/${postId}/comments`, {
-                method: 'POST',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify({ content })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Failed to add comment');
-            }
-
-            if (commentInput) {
-                commentInput.value = '';
-            }
-
-            this.showSuccess('Comment added successfully');
-            await this.showComments(postId);
-        } catch (error) {
-            console.error('Error submitting comment:', error);
-            this.showError('Failed to add comment. Please try again.');
-        }
-    }
-
-    showLocation(latitude, longitude) {
-        const modal = document.getElementById('locationModal');
-        const mapContainer = document.getElementById('locationMap');
-        
-        if (!modal || !mapContainer) return;
-
-        // Clear previous map
-        mapContainer.innerHTML = '';
-        
-        // Create new map
-        const map = L.map('locationMap').setView([latitude, longitude], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
-
-        L.marker([latitude, longitude]).addTo(map)
-            .bindPopup('Post Location')
-            .openPopup();
-
-        modal.classList.remove('hidden');
-    }
-
-    closeLocationModal() {
-        const modal = document.getElementById('locationModal');
-        if (modal) {
-            modal.classList.add('hidden');
         }
     }
 
@@ -552,15 +352,7 @@ class ExplorePage {
     }
 
     showSuccess(message) {
-        // You can implement a better notification system
-        console.log('Success:', message);
-    }
-
-    updateCommentCountUI(postId, count) {
-        const commentBtns = document.querySelectorAll(`.comment-btn[onclick="explorePage.showComments('${postId}')"]`);
-        commentBtns.forEach(btn => {
-            btn.innerHTML = `<i class="fas fa-comment"></i><span>${count}</span>`;
-        });
+        alert(`Success: ${message}`);
     }
 
     updateLoadMoreButton() {
@@ -572,19 +364,6 @@ class ExplorePage {
                 loadMoreBtn.style.display = 'inline-flex';
             }
         }
-    }
-
-    getCurrentUserId() {
-        const user = localStorage.getItem('user');
-        if (user) {
-            try {
-                const userData = JSON.parse(user);
-                return userData.id || userData._id;
-            } catch (e) {
-                console.error('Error parsing user data:', e);
-            }
-        }
-        return null;
     }
 
     escapeHtml(unsafe) {
@@ -621,15 +400,6 @@ class ExplorePage {
             return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
         }
         return 'Location available';
-    }
-
-    getCommentAuthor(user) {
-        if (!user) return 'Unknown User';
-        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
-        if (fullName) {
-            return fullName;
-        }
-        return user.username || user.name || 'Unknown User';
     }
 }
 

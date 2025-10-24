@@ -3,6 +3,7 @@ let map;
 let locationMarker;
 let selectedLocation = null;
 let uploadedMedia = [];
+let geocoder;
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:5000/api/v1';
@@ -16,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
 });
 
-// Check if user is authenticated
+// Enhanced authentication check with token expiry handling
 function checkAuthentication() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -24,12 +25,39 @@ function checkAuthentication() {
         window.location.href = 'login.html';
         return false;
     }
+    
+    // Check if token is expired (basic check)
+    const tokenData = parseJwt(token);
+    if (tokenData && tokenData.exp) {
+        const currentTime = Date.now() / 1000;
+        if (currentTime > tokenData.exp) {
+            alert('Your session has expired. Please login again.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+            return false;
+        }
+    }
+    
     return true;
 }
 
-// Get auth headers
+// Helper function to parse JWT token
+function parseJwt(token) {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        return null;
+    }
+}
+
+// Enhanced getAuthHeaders with error handling
 function getAuthHeaders(expectJson = true) {
     const token = localStorage.getItem('token');
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
+
     const headers = {
         'Authorization': `Bearer ${token}`
     };
@@ -41,7 +69,7 @@ function getAuthHeaders(expectJson = true) {
     return headers;
 }
 
-// Map initialization (unchanged)
+// Map initialization with Geocoder
 function initializeMap() {
     map = L.map('locationMap').setView([40.7128, -74.0060], 13);
     
@@ -50,15 +78,66 @@ function initializeMap() {
         maxZoom: 19
     }).addTo(map);
 
+    // Initialize geocoder
+    geocoder = L.Control.geocoder({
+        defaultMarkGeocode: false,
+        position: 'topright',
+        placeholder: 'Search locations...',
+        errorMessage: 'Location not found.',
+        showResultIcons: true,
+        collapsed: true,
+        geocoder: L.Control.Geocoder.nominatim()
+    })
+    .on('markgeocode', function(e) {
+        const { center, name, bbox } = e.geocode;
+        
+        // Set the location
+        setPostLocation(center, name);
+        
+        // Fit map to the bounds if available
+        if (bbox) {
+            map.fitBounds(bbox);
+        } else {
+            map.setView(center, 15);
+        }
+    })
+    .addTo(map);
+
+    // Style the geocoder control to match your theme
+    setTimeout(() => {
+        const geocoderContainer = document.querySelector('.leaflet-control-geocoder');
+        if (geocoderContainer) {
+            geocoderContainer.style.background = 'var(--card-bg)';
+            geocoderContainer.style.border = '1px solid var(--border)';
+            geocoderContainer.style.borderRadius = '10px';
+            geocoderContainer.style.backdropFilter = 'blur(10px)';
+            
+            const input = geocoderContainer.querySelector('input');
+            if (input) {
+                input.style.background = 'rgba(13, 27, 42, 0.9)';
+                input.style.color = 'var(--text)';
+                input.style.border = '1px solid var(--border)';
+                input.style.borderRadius = '8px';
+                input.placeholder = 'Search locations...';
+            }
+
+            const results = geocoderContainer.querySelector('.leaflet-control-geocoder-alternatives');
+            if (results) {
+                results.style.background = 'var(--card-bg)';
+                results.style.border = '1px solid var(--border)';
+            }
+        }
+    }, 100);
+
     map.on('click', function(e) {
         setPostLocation(e.latlng);
     });
 
-    console.log('Map initialized successfully');
+    console.log('Map with geocoder initialized successfully');
 }
 
-// Set post location on map (unchanged)
-function setPostLocation(latlng) {
+// Set post location on map
+function setPostLocation(latlng, placeName = null) {
     selectedLocation = latlng;
     
     if (locationMarker) {
@@ -77,22 +156,28 @@ function setPostLocation(latlng) {
     document.getElementById('latitude').value = latlng.lat.toFixed(6);
     document.getElementById('longitude').value = latlng.lng.toFixed(6);
     
-    getAddressFromCoordinates(latlng.lat, latlng.lng);
+    // Use provided place name or get from coordinates
+    if (placeName) {
+        document.getElementById('locationAddress').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${placeName}`;
+        document.getElementById('placeName').value = placeName;
+    } else {
+        getAddressFromCoordinates(latlng.lat, latlng.lng);
+    }
     
     locationMarker.bindPopup(`
         <div style="text-align: center; padding: 10px;">
             <strong style="color: #00e0ff;">📍 Selected Location</strong><br>
             <span style="color: #666; font-size: 12px;">
-                Lat: ${latlng.lat.toFixed(6)}<br>
-                Lng: ${latlng.lng.toFixed(6)}
+                ${placeName ? placeName : `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`}
             </span>
         </div>
     `).openPopup();
     
-    map.setView(latlng, 15);
+    // Center map on the selected location
+    map.setView(latlng, Math.max(map.getZoom(), 15));
 }
 
-// Get address from coordinates (unchanged)
+// Get address from coordinates
 function getAddressFromCoordinates(lat, lng) {
     const addressElement = document.getElementById('locationAddress');
     addressElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting address...';
@@ -105,17 +190,20 @@ function getAddressFromCoordinates(lat, lng) {
                 const shortenedAddress = address.length > 80 ? 
                     address.substring(0, 80) + '...' : address;
                 addressElement.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${shortenedAddress}`;
+                document.getElementById('placeName').value = address;
             } else {
-                addressElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Address not found';
+                addressElement.innerHTML = '<i class="fas fa-map-pin"></i> Location set';
+                document.getElementById('placeName').value = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             }
         })
         .catch(error => {
             console.error('Error getting address:', error);
             addressElement.innerHTML = `<i class="fas fa-map-pin"></i> Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('placeName').value = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         });
 }
 
-// Location detection (unchanged)
+// Location detection
 function initializeLocationDetection() {
     const locationBtn = document.getElementById('detectLocation');
     const mapOverlay = document.getElementById('mapOverlay');
@@ -180,12 +268,13 @@ function initializeLocationDetection() {
     });
 }
 
-// Media upload functionality (unchanged)
+// Media upload functionality
 function initializeMediaUpload() {
     const uploadArea = document.getElementById('uploadArea');
     const mediaInput = document.getElementById('mediaInput');
     const browseBtn = document.getElementById('browseBtn');
     const mediaPreview = document.getElementById('mediaPreview');
+    let latestMediaToken = null;
 
     browseBtn.addEventListener('click', () => {
         console.log('Browse button clicked');
@@ -235,74 +324,129 @@ function initializeMediaUpload() {
     }
 
     function handleFiles(files) {
-        [...files].forEach(file => {
-            if (validateFile(file)) {
-                previewFile(file);
-            }
-        });
+        const fileArray = [...files];
+        if (!fileArray.length) return;
+
+        const file = fileArray[0];
+        if (!validateFile(file)) {
+            return;
+        }
+
+        const token = Symbol('mediaUpload');
+        latestMediaToken = token;
+
+        clearExistingMedia();
+        previewFile(file, token);
     }
 
     function validateFile(file) {
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        const maxSize = 5 * 1024 * 1024; // 5MB (matches backend)
+        const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        const videoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+        const validTypes = [...imageTypes, ...videoTypes];
 
         if (!validTypes.includes(file.type)) {
-            alert('Please select valid image files (JPG, PNG, GIF)');
+            alert('Please select a JPG, PNG, GIF image or an MP4/WEBM/OGG/MOV/AVI/MKV video');
             return false;
         }
 
+        const isVideo = file.type.startsWith('video/');
+        const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+
         if (file.size > maxSize) {
-            alert('File size must be less than 5MB');
+            alert(isVideo ? 'Video size must be 50MB or less' : 'Image size must be 5MB or less');
             return false;
         }
 
         return true;
     }
 
-    function previewFile(file) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            const mediaItem = document.createElement('div');
-            mediaItem.className = 'media-item';
-            
-            if (file.type.startsWith('image/')) {
+    function clearExistingMedia() {
+        if (uploadedMedia.length === 0) return;
+
+        uploadedMedia.forEach(item => {
+            if (item.element && item.element.parentElement) {
+                item.element.remove();
+            }
+
+            if (item.isObjectUrl && item.previewUrl) {
+                URL.revokeObjectURL(item.previewUrl);
+            }
+        });
+
+        uploadedMedia = [];
+    }
+
+    function previewFile(file, token) {
+        const isVideo = file.type.startsWith('video/');
+        const mediaItem = document.createElement('div');
+        mediaItem.className = 'media-item';
+
+        if (isVideo) {
+            if (token !== latestMediaToken) {
+                return;
+            }
+            const objectUrl = URL.createObjectURL(file);
+            mediaItem.innerHTML = `
+                <video src="${objectUrl}" controls playsinline preload="metadata"></video>
+                <button type="button" class="remove-btn" onclick="removeMedia(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            mediaPreview.appendChild(mediaItem);
+            uploadedMedia.push({
+                file,
+                element: mediaItem,
+                previewUrl: objectUrl,
+                isObjectUrl: true
+            });
+            console.log('Video preview added');
+        } else {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                if (token !== latestMediaToken) {
+                    return;
+                }
                 mediaItem.innerHTML = `
                     <img src="${e.target.result}" alt="Preview">
                     <button type="button" class="remove-btn" onclick="removeMedia(this)">
                         <i class="fas fa-times"></i>
                     </button>
                 `;
-            }
-            
-            mediaPreview.appendChild(mediaItem);
-            uploadedMedia.push({
-                file: file,
-                element: mediaItem,
-                previewUrl: e.target.result
-            });
-            
-            console.log('Media preview added, total:', uploadedMedia.length);
+
+                mediaPreview.appendChild(mediaItem);
+                uploadedMedia.push({
+                    file,
+                    element: mediaItem,
+                    previewUrl: e.target.result,
+                    isObjectUrl: false
+                });
+                console.log('Image preview added');
+            };
+
+            reader.readAsDataURL(file);
         }
-        
-        reader.readAsDataURL(file);
     }
 }
 
-// Remove media function (unchanged)
+// Remove media function
 function removeMedia(button) {
     const mediaItem = button.parentElement;
     const index = uploadedMedia.findIndex(item => item.element === mediaItem);
     
     if (index > -1) {
-        uploadedMedia.splice(index, 1);
+        const [removed] = uploadedMedia.splice(index, 1);
+        if (removed && removed.isObjectUrl && removed.previewUrl) {
+            URL.revokeObjectURL(removed.previewUrl);
+        }
     }
     mediaItem.remove();
     
     console.log('Media removed, remaining:', uploadedMedia.length);
 }
 
-// Form submission - UPDATED FOR BACKEND INTEGRATION
+// FIXED: Enhanced Form submission with proper location handling
 function initializeFormSubmission() {
     const submitBtn = document.getElementById('submitBtn');
     const cancelBtn = document.getElementById('cancelBtn');
@@ -323,44 +467,71 @@ function initializeFormSubmission() {
 
         try {
             const hasMedia = uploadedMedia.length > 0;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+            const placeName = document.getElementById('placeName').value.trim();
+            const locationLabel = placeName || document.getElementById('locationAddress').textContent.trim();
 
             let requestBody;
             let headers;
+
+            // Create proper GeoJSON location object
+            const latNum = parseFloat(latitude);
+            const lngNum = parseFloat(longitude);
+            if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+                throw new Error('Invalid location data. Please reselect the location on the map.');
+            }
+            const locationData = {
+                type: "Point",
+                coordinates: [lngNum, latNum],
+                address: locationLabel || null
+            };
 
             if (hasMedia) {
                 const formData = new FormData();
                 formData.append('title', document.getElementById('postTitle').value.trim());
                 formData.append('content', document.getElementById('postContent').value.trim());
+                formData.append('category', document.getElementById('postCategory').value);
 
+                // Handle tags properly
                 const rawTags = document.getElementById('postTags').value.trim();
                 if (rawTags) {
-                    formData.append('tags', rawTags);
+                    const tagsArray = rawTags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    tagsArray.forEach(tag => {
+                        formData.append('tags', tag);
+                    });
                 }
 
-                if (selectedLocation) {
-                    formData.append('latitude', selectedLocation.lat);
-                    formData.append('longitude', selectedLocation.lng);
+                // Append location as stringified JSON for FormData
+                formData.append('location', JSON.stringify(locationData));
+                if (locationLabel) {
+                    formData.append('address', locationLabel);
                 }
 
-                formData.append('image', uploadedMedia[0].file);
-
-                console.log('Submitting post with form data');
-                for (const pair of formData.entries()) {
-                    console.log('FormData entry:', pair[0], pair[1]);
+                formData.append('privacy', document.getElementById('postPrivacy').value);
+                
+                if (uploadedMedia.length > 0 && uploadedMedia[0].file) {
+                    formData.append('media', uploadedMedia[0].file);
                 }
 
+                console.log('Submitting post with location:', locationData);
                 requestBody = formData;
                 headers = getAuthHeaders(false);
             } else {
+                const rawTags = document.getElementById('postTags').value.trim();
+                const tagsArray = rawTags ? rawTags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
                 const postPayload = {
                     title: document.getElementById('postTitle').value.trim(),
                     content: document.getElementById('postContent').value.trim(),
-                    tags: document.getElementById('postTags').value.trim(),
-                    latitude: selectedLocation ? selectedLocation.lat : null,
-                    longitude: selectedLocation ? selectedLocation.lng : null
+                    category: document.getElementById('postCategory').value,
+                    tags: tagsArray,
+                    privacy: document.getElementById('postPrivacy').value,
+                    location: locationData, // Proper GeoJSON format
+                    address: locationLabel || null
                 };
 
-                console.log('Submitting post with JSON payload', postPayload);
+                console.log('Submitting post with location data:', postPayload.location);
 
                 requestBody = JSON.stringify(postPayload);
                 headers = getAuthHeaders(true);
@@ -371,6 +542,13 @@ function initializeFormSubmission() {
                 headers,
                 body: requestBody
             });
+
+            // Handle authentication errors
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                throw new Error('Session expired. Please login again.');
+            }
 
             const result = await response.json();
 
@@ -384,7 +562,13 @@ function initializeFormSubmission() {
         } catch (error) {
             console.error('Error creating post:', error);
             loadingOverlay.classList.add('hidden');
-            showErrorMessage(error.message);
+            
+            if (error.message.includes('Session expired') || error.message.includes('authentication')) {
+                alert('Your session has expired. Please login again.');
+                window.location.href = 'login.html';
+            } else {
+                showErrorMessage(error.message);
+            }
         }
     });
 
@@ -427,7 +611,7 @@ function validateForm() {
     return true;
 }
 
-// Show success message - UPDATED
+// Show success message
 function showSuccessMessage(post) {
     const successMsg = document.createElement('div');
     successMsg.style.cssText = `
@@ -450,16 +634,16 @@ function showSuccessMessage(post) {
         <div style="font-size: 4rem; color: #00e0ff; margin-bottom: 20px;">
             <i class="fas fa-check-circle"></i>
         </div>
-        <h3 style="color: white; margin-bottom: 15px; font-size: 1.5rem;">Post Published!</h3>
+        <h3 style="color: white; margin-bottom: 15px; font-size: 1.5rem;">Opportunity Published!</h3>
         <p style="color: #B0C4DE; margin-bottom: 25px;">Your post "${post.title}" has been shared successfully.</p>
         <div style="display: flex; gap: 15px; justify-content: center;">
             <button onclick="this.parentElement.parentElement.remove(); resetForm();" 
                     style="background: #00e0ff; color: #0D1B2A; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
                 <i class="fas fa-plus"></i> Create Another
             </button>
-            <button onclick="window.location.href = 'index.html'" 
+            <button onclick="window.location.href = 'explore.html'" 
                     style="background: transparent; color: #00e0ff; border: 2px solid #00e0ff; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-weight: 600;">
-                <i class="fas fa-eye"></i> View Posts
+                <i class="fas fa-eye"></i> View Opportunities
             </button>
         </div>
     `;
@@ -501,15 +685,21 @@ function showErrorMessage(message) {
     document.body.appendChild(errorMsg);
 }
 
-// Reset form (unchanged)
+// Reset form
 function resetForm() {
     document.getElementById('postTitle').value = '';
     document.getElementById('postContent').value = '';
     document.getElementById('postCategory').value = '';
     document.getElementById('postPrivacy').value = 'public';
     document.getElementById('postTags').value = '';
+    document.getElementById('placeName').value = '';
     
     document.getElementById('mediaPreview').innerHTML = '';
+    uploadedMedia.forEach(item => {
+        if (item && item.isObjectUrl && item.previewUrl) {
+            URL.revokeObjectURL(item.previewUrl);
+        }
+    });
     uploadedMedia = [];
     
     if (locationMarker) {
@@ -517,12 +707,12 @@ function resetForm() {
         locationMarker = null;
     }
     selectedLocation = null;
-    document.getElementById('locationAddress').innerHTML = 'Click on the map or use location detection to set your post location';
+    document.getElementById('locationAddress').innerHTML = 'Search for a location or click on the map to set position';
     document.getElementById('latitude').value = '';
     document.getElementById('longitude').value = '';
     document.getElementById('accuracyIndicator').classList.add('hidden');
     
     map.setView([40.7128, -74.0060], 13);
     
-    console.log('Form reset successfully');
+    console.log('Form reset  successfully');
 }

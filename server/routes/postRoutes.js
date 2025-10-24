@@ -18,8 +18,8 @@ router.get('/', getPosts);
 router.get('/:id', getPostById);
 
 // Protected routes
-router.post('/', authMiddleware, upload.single('image'), createPost);
-router.put('/:id', authMiddleware, upload.single('image'), updatePost);
+router.post('/', authMiddleware, upload.single('media'), createPost);
+router.put('/:id', authMiddleware, upload.single('media'), updatePost);
 router.delete('/:id', authMiddleware, deletePost);
 router.post('/:id/like', authMiddleware, likePost);
 router.post('/:id/comments', authMiddleware, addComment);

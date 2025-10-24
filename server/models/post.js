@@ -40,16 +40,15 @@ const postSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  videoUrl: {
+    type: String,
+    default: null
+  },
   location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      default: undefined
-    }
+    type: String,
+    trim: true,
+    maxlength: 200,
+    default: null
   },
   tags: [{
     type: String,
@@ -69,7 +68,6 @@ const postSchema = new mongoose.Schema({
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ likes: -1 });
 postSchema.index({ tags: 1 });
-postSchema.index({ location: '2dsphere' });
 
 // Virtual for like count
 postSchema.virtual('likeCount').get(function() {
@@ -85,5 +83,28 @@ postSchema.virtual('commentCount').get(function() {
 postSchema.set('toJSON', { virtuals: true });
 
 const Post = mongoose.model('Post', postSchema);
+
+// Drop legacy geospatial index so string-based locations can be saved
+const removeLegacyLocationIndex = async () => {
+  try {
+    const indexes = await Post.collection.indexes();
+    const hasLegacyIndex = indexes.some(index => index.name === 'location_2dsphere');
+
+    if (hasLegacyIndex) {
+      await Post.collection.dropIndex('location_2dsphere');
+      console.log('Removed legacy location_2dsphere index from posts collection');
+    }
+  } catch (error) {
+    if (error.codeName !== 'IndexNotFound') {
+      console.warn('Failed to drop legacy location index:', error.message);
+    }
+  }
+};
+
+if (mongoose.connection.readyState === 1) {
+  removeLegacyLocationIndex();
+} else {
+  mongoose.connection.once('connected', removeLegacyLocationIndex);
+}
 
 module.exports = Post;

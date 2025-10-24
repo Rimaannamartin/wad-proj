@@ -6,7 +6,27 @@ const asyncHandler = require('express-async-handler');
 // @access  Private
 const createPost = asyncHandler(async (req, res) => {
   console.log('Incoming createPost body:', req.body);
-  const { title, content, tags, latitude, longitude, address } = req.body;
+  let { title, content, tags, latitude, longitude, address, location } = req.body;
+
+  // Support location sent as JSON string or object (GeoJSON format)
+  let parsedLocation = null;
+  if (location) {
+    try {
+      parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
+      if (
+        parsedLocation &&
+        parsedLocation.type === 'Point' &&
+        Array.isArray(parsedLocation.coordinates) &&
+        parsedLocation.coordinates.length === 2
+      ) {
+        longitude = longitude ?? parsedLocation.coordinates[0];
+        latitude = latitude ?? parsedLocation.coordinates[1];
+        address = address ?? parsedLocation.address ?? parsedLocation.placeName ?? null;
+      }
+    } catch (err) {
+      console.warn('Failed to parse location payload:', err.message);
+    }
+  }
 
   let normalizedTags = [];
   if (Array.isArray(tags)) {
@@ -30,22 +50,30 @@ const createPost = asyncHandler(async (req, res) => {
   const latNum = latitude !== undefined && latitude !== null ? parseFloat(latitude) : null;
   const lngNum = longitude !== undefined && longitude !== null ? parseFloat(longitude) : null;
   const hasValidLocation = Number.isFinite(latNum) && Number.isFinite(lngNum);
+  const locationText = address || parsedLocation?.address || parsedLocation?.placeName || null;
 
   const postData = {
     title,
     content,
     author: req.user._id,
-    imageUrl: req.file ? `/uploads/images/${req.file.filename}` : null,
+    imageUrl: null,
+    videoUrl: null,
     tags: normalizedTags
   };
 
   // Add location if valid
-  if (hasValidLocation) {
-    postData.location = {
-      type: 'Point',
-      coordinates: [lngNum, latNum],
-      address: address || null
-    };
+  if (locationText) {
+    postData.location = locationText;
+  } else if (hasValidLocation) {
+    postData.location = `Lat: ${latNum}, Lng: ${lngNum}`;
+  }
+
+  if (req.file) {
+    if (req.file.mimetype.startsWith('video/')) {
+      postData.videoUrl = `/uploads/videos/${req.file.filename}`;
+    } else {
+      postData.imageUrl = `/uploads/images/${req.file.filename}`;
+    }
   }
 
   const post = await Post.create(postData);
@@ -89,16 +117,27 @@ const getPosts = asyncHandler(async (req, res) => {
 
   // Search in title, content, and tags
   if (req.query.search) {
+    const searchRegex = { $regex: req.query.search, $options: 'i' };
     query.$or = [
-      { title: { $regex: req.query.search, $options: 'i' } },
-      { content: { $regex: req.query.search, $options: 'i' } },
-      { tags: { $in: [new RegExp(req.query.search, 'i')] } }
+      { title: searchRegex },
+      { content: searchRegex },
+      { tags: { $in: [new RegExp(req.query.search, 'i')] } },
+      { location: searchRegex },
+      { 'location.address': searchRegex }
     ];
   }
 
-  // Location filter - search in location address
+  // Location filter - search in human-readable location text
   if (req.query.location) {
-    query['location.address'] = { $regex: req.query.location, $options: 'i' };
+    const locationRegex = { $regex: req.query.location, $options: 'i' };
+    query.$and = query.$and || [];
+    // Support both new string field and legacy GeoJSON documents
+    query.$and.push({
+      $or: [
+        { location: locationRegex },
+        { 'location.address': locationRegex }
+      ]
+    });
   }
 
   console.log('Database Query:', query); // Debug log
@@ -116,23 +155,7 @@ const getPosts = asyncHandler(async (req, res) => {
     // Transform posts for frontend
     const transformedPosts = posts.map(post => {
       const postObj = post.toObject ? post.toObject() : { ...post };
-      
-      // Convert GeoJSON coordinates to latitude/longitude for frontend
-      if (postObj.location && postObj.location.coordinates && postObj.location.coordinates.length === 2) {
-        postObj.location = {
-          longitude: postObj.location.coordinates[0],
-          latitude: postObj.location.coordinates[1],
-          address: postObj.location.address || null
-        };
-      } else if (postObj.location && postObj.location.coordinates) {
-        // Handle case where location exists but coordinates are invalid
-        postObj.location = {
-          longitude: null,
-          latitude: null,
-          address: postObj.location.address || null
-        };
-      }
-      
+
       // Ensure likeCount and commentCount exist
       if (!postObj.likeCount && postObj.likes) {
         postObj.likeCount = postObj.likes.length;
@@ -189,14 +212,6 @@ const getPostById = asyncHandler(async (req, res) => {
     // Transform location data for frontend
     const postObj = post.toObject ? post.toObject() : { ...post };
     
-    if (postObj.location && postObj.location.coordinates && postObj.location.coordinates.length === 2) {
-      postObj.location = {
-        longitude: postObj.location.coordinates[0],
-        latitude: postObj.location.coordinates[1],
-        address: postObj.location.address || null
-      };
-    }
-
     // Ensure virtual fields exist
     if (!postObj.likeCount && postObj.likes) {
       postObj.likeCount = postObj.likes.length;
@@ -241,7 +256,7 @@ const updatePost = asyncHandler(async (req, res) => {
     });
   }
 
-  const { title, content, tags, latitude, longitude, address } = req.body;
+  const { title, content, tags, latitude, longitude, address, location } = req.body;
 
   // Update fields
   if (title) post.title = title;
@@ -255,20 +270,41 @@ const updatePost = asyncHandler(async (req, res) => {
     }
   }
   
-  if (req.file) post.imageUrl = `/uploads/images/${req.file.filename}`;
+  if (req.file) {
+    if (req.file.mimetype.startsWith('video/')) {
+      post.videoUrl = `/uploads/videos/${req.file.filename}`;
+      post.imageUrl = null;
+    } else {
+      post.imageUrl = `/uploads/images/${req.file.filename}`;
+      post.videoUrl = null;
+    }
+  }
 
   // Update location if provided
-  if (latitude !== undefined && longitude !== undefined) {
+  let locationText = address || null;
+  if (!locationText && location) {
+    try {
+      const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
+      if (parsedLocation) {
+        locationText = parsedLocation.address || parsedLocation.placeName || (parsedLocation.type === 'Point' && Array.isArray(parsedLocation.coordinates)
+          ? `Lat: ${parsedLocation.coordinates[1]}, Lng: ${parsedLocation.coordinates[0]}`
+          : null);
+      }
+    } catch (err) {
+      locationText = typeof location === 'string' ? location : null;
+    }
+  }
+
+  if (!locationText && latitude !== undefined && longitude !== undefined) {
     const latNum = parseFloat(latitude);
     const lngNum = parseFloat(longitude);
-    
     if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
-      post.location = {
-        type: 'Point',
-        coordinates: [lngNum, latNum],
-        address: address || post.location?.address || null
-      };
+      locationText = `Lat: ${latNum}, Lng: ${lngNum}`;
     }
+  }
+
+  if (locationText) {
+    post.location = locationText;
   }
 
   await post.save();
