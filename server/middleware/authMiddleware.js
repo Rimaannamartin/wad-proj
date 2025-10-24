@@ -3,7 +3,7 @@ const User = require('../models/users');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallbacksecret';
 
-const authMiddleware = async (req, res, next) => {
+const protect = async (req, res, next) => {
     try {
         const token = req.header('Authorization');
         
@@ -33,7 +33,7 @@ const authMiddleware = async (req, res, next) => {
 
         req.user = user;
         next();
-        
+
     } catch (error) {
         console.error('Auth middleware error:', error);
         return res.status(401).json({
@@ -43,4 +43,5 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+module.exports = protect;
+module.exports.protect = protect;

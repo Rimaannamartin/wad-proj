@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const connectDb = require("./config/connect")
 const userRoutes = require('./routes/userRoutes')
-const postRoutes = require('./routes/postRoutes'); // Add post routes
+const postRoutes = require('./routes/postRoutes');
+const profileRoutes = require('./routes/profileRoutes'); // ADD THIS LINE
 const session = require("express-session");
 
 dotenv.config();
@@ -13,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // for form submissions
+app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
     secret: "supersecreatkey",
@@ -23,12 +24,15 @@ app.use(session({
 }))
 
 const cors = require("cors");
-app.use(cors({ origin: "http://localhost:5000", credentials: true }));
+app.use(cors({ 
+    origin: "http://localhost:3000", // Changed to match your frontend port
+    credentials: true 
+}));
 
 // Serve static files from client folder
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Serve uploaded files statically (for post images)
+// Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve index.html as root
@@ -38,7 +42,8 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/v1/userAuth', userRoutes);
-app.use('/api/v1/posts', postRoutes); // Add post routes
+app.use('/api/v1/posts', postRoutes);
+app.use('/api/v1/profile', profileRoutes); // ADD THIS LINE
 
 // Error handling middleware
 app.use((err, req, res, next) => {
