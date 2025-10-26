@@ -16,9 +16,14 @@ const getMyProfile = async (req, res) => {
       });
     }
 
+    // Ensure counts are always present explicitly
+    const profileObj = profile.toObject({ virtuals: true });
+    profileObj.followersCount = Array.isArray(profileObj.followers) ? profileObj.followers.length : (profileObj.followersCount || 0);
+    profileObj.followingCount = Array.isArray(profileObj.following) ? profileObj.following.length : (profileObj.followingCount || 0);
+
     res.json({
       success: true,
-      data: profile
+      data: profileObj
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -78,10 +83,14 @@ const createOrUpdateProfile = async (req, res) => {
         { new: true, runValidators: true }
       ).populate('user', ['email', 'username']);
 
+      const updated = profile.toObject({ virtuals: true });
+      updated.followersCount = Array.isArray(updated.followers) ? updated.followers.length : (updated.followersCount || 0);
+      updated.followingCount = Array.isArray(updated.following) ? updated.following.length : (updated.followingCount || 0);
+
       return res.json({
         success: true,
         message: 'Profile updated successfully',
-        data: profile
+        data: updated
       });
     }
 
@@ -92,10 +101,14 @@ const createOrUpdateProfile = async (req, res) => {
     // We need to populate the user details on creation as well
     const newProfile = await Profile.findById(profile._id).populate('user', ['email', 'username']);
 
+    const created = newProfile.toObject({ virtuals: true });
+    created.followersCount = Array.isArray(created.followers) ? created.followers.length : (created.followersCount || 0);
+    created.followingCount = Array.isArray(created.following) ? created.following.length : (created.followingCount || 0);
+
     res.status(201).json({
       success: true,
       message: 'Profile created successfully',
-      data: newProfile
+      data: created
     });
   } catch (error) {
     console.error('Create/update profile error:', error);
@@ -130,9 +143,13 @@ const getProfileByUserId = async (req, res) => {
       });
     }
 
+    const profileObj = profile.toObject({ virtuals: true });
+    profileObj.followersCount = Array.isArray(profileObj.followers) ? profileObj.followers.length : (profileObj.followersCount || 0);
+    profileObj.followingCount = Array.isArray(profileObj.following) ? profileObj.following.length : (profileObj.followingCount || 0);
+
     res.json({
       success: true,
-      data: profile
+      data: profileObj
     });
   } catch (error) {
     console.error('Get profile by user ID error:', error);
@@ -228,10 +245,90 @@ const deleteProfile = async (req, res) => {
   }
 };
 
+// @desc    Follow or unfollow a user
+// @route   POST /api/profile/user/:userId/follow
+// @access  Private
+const toggleFollow = async (req, res) => {
+  try {
+    const targetUserId = req.params.userId;
+
+    if (!targetUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Target user is required'
+      });
+    }
+
+    if (targetUserId.toString() === req.user.id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot follow yourself'
+      });
+    }
+
+    const [targetProfile, followerProfile] = await Promise.all([
+      Profile.findOne({ user: targetUserId }),
+      Profile.findOne({ user: req.user.id })
+    ]);
+
+    if (!targetProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Target profile not found'
+      });
+    }
+
+    if (!followerProfile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Create your profile before following others'
+      });
+    }
+
+    targetProfile.followers = targetProfile.followers || [];
+    followerProfile.following = followerProfile.following || [];
+
+    const alreadyFollowing = targetProfile.followers.some(
+      followerId => followerId.toString() === req.user.id.toString()
+    );
+
+    if (alreadyFollowing) {
+      targetProfile.followers = targetProfile.followers.filter(
+        followerId => followerId.toString() !== req.user.id.toString()
+      );
+      followerProfile.following = followerProfile.following.filter(
+        followedId => followedId.toString() !== targetUserId.toString()
+      );
+    } else {
+      targetProfile.followers.push(req.user.id);
+      followerProfile.following.push(targetUserId);
+    }
+
+    await Promise.all([targetProfile.save(), followerProfile.save()]);
+
+    res.json({
+      success: true,
+      data: {
+        isFollowing: !alreadyFollowing,
+        followersCount: targetProfile.followers.length,
+        followingCount: followerProfile.following.length
+      },
+      message: alreadyFollowing ? 'Unfollowed user' : 'Started following user'
+    });
+  } catch (error) {
+    console.error('Toggle follow error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 module.exports = {
   getMyProfile,
   createOrUpdateProfile,
   getProfileByUserId,
   getAllProfiles,
-  deleteProfile
+  deleteProfile,
+  toggleFollow
 };

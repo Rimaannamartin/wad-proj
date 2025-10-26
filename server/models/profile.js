@@ -45,6 +45,14 @@ const profileSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   socialLinks: {
     linkedin: { type: String, default: '' },
     twitter: { type: String, default: '' },
@@ -77,7 +85,16 @@ profileSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.surname}`;
 });
 
+profileSchema.virtual('followersCount').get(function() {
+  return this.followers ? this.followers.length : 0;
+});
+
+profileSchema.virtual('followingCount').get(function() {
+  return this.following ? this.following.length : 0;
+});
+
 // Ensure virtual fields are serialized
 profileSchema.set('toJSON', { virtuals: true });
+profileSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('Profile', profileSchema);

@@ -50,6 +50,11 @@ const postSchema = new mongoose.Schema({
     maxlength: 200,
     default: null
   },
+  categories: [{
+    type: String,
+    trim: true,
+    maxlength: 40
+  }],
   tags: [{
     type: String,
     trim: true,
@@ -68,19 +73,21 @@ const postSchema = new mongoose.Schema({
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ likes: -1 });
 postSchema.index({ tags: 1 });
+postSchema.index({ categories: 1 });
 
 // Virtual for like count
 postSchema.virtual('likeCount').get(function() {
-  return this.likes.length;
+  return Array.isArray(this.likes) ? this.likes.length : 0;
 });
 
 // Virtual for comment count
 postSchema.virtual('commentCount').get(function() {
-  return this.comments.length;
+  return Array.isArray(this.comments) ? this.comments.length : 0;
 });
 
 // Ensure virtual fields are serialized
 postSchema.set('toJSON', { virtuals: true });
+postSchema.set('toObject', { virtuals: true });
 
 const Post = mongoose.model('Post', postSchema);
 

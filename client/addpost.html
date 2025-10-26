@@ -100,19 +100,20 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="postCategory">Category</label>
-                        <div class="select-with-icon">
-                            <i class="fas fa-tag"></i>
-                            <select id="postCategory" required>
-                                <option value="">Choose a category</option>
-                                <option value="business">💼 Business</option>
-                                <option value="collaboration">🤝 Collaboration</option>
-                                <option value="investment">💰 Investment</option>
-                                <option value="networking">🌐 Networking</option>
-                                <option value="partnership">⚡ Partnership</option>
-                                <option value="mentorship">🎯 Mentorship</option>
-                                <option value="event">🎉 Event</option>
-                            </select>
+                        <label>Categories</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-tags"></i>
+                            <input type="text" id="categoriesInput" placeholder="Type a category and press Enter (e.g., fintech, health, seed)">
+                        </div>
+                        <div id="categoriesChips" class="chips-container"></div>
+                        <div class="quick-cats">
+                            <button type="button" class="chip-btn" data-cat="business">Business</button>
+                            <button type="button" class="chip-btn" data-cat="collaboration">Collaboration</button>
+                            <button type="button" class="chip-btn" data-cat="investment">Investment</button>
+                            <button type="button" class="chip-btn" data-cat="networking">Networking</button>
+                            <button type="button" class="chip-btn" data-cat="partnership">Partnership</button>
+                            <button type="button" class="chip-btn" data-cat="mentorship">Mentorship</button>
+                            <button type="button" class="chip-btn" data-cat="event">Event</button>
                         </div>
                     </div>
 

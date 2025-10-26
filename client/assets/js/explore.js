@@ -7,7 +7,7 @@ class ExplorePage {
         this.isLoading = false;
         this.filters = {
             location: '',
-            category: ''
+            categories: ''
         };
         this.currentPostId = null;
         
@@ -54,8 +54,11 @@ class ExplorePage {
         // Meeting request form
         document.getElementById('meetingForm').addEventListener('submit', (e) => this.submitMeetingRequest(e));
 
-        // Enter key support for location search
+        // Enter key support for filters
         document.getElementById('locationFilter').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.applyFilters();
+        });
+        document.getElementById('categoryFilter').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.applyFilters();
         });
     }
@@ -74,7 +77,7 @@ class ExplorePage {
 
             // Add filters if they have values
             if (this.filters.location) params.location = this.filters.location;
-            if (this.filters.category) params.category = this.filters.category;
+            if (this.filters.categories) params.categories = this.filters.categories;
 
             const queryParams = new URLSearchParams(params);
             const response = await fetch(`http://localhost:5000/api/v1/posts?${queryParams}`);
@@ -120,7 +123,7 @@ class ExplorePage {
     applyFilters() {
         this.filters = {
             location: document.getElementById('locationFilter').value.trim(),
-            category: document.getElementById('categoryFilter').value
+            categories: document.getElementById('categoryFilter').value.trim()
         };
         
         this.currentPage = 1;
@@ -134,7 +137,7 @@ class ExplorePage {
         
         this.filters = {
             location: '',
-            category: ''
+            categories: ''
         };
         
         this.currentPage = 1;
@@ -175,7 +178,8 @@ class ExplorePage {
         const content = post.content || '';
         const imageUrl = post.imageUrl ? `http://localhost:5000${post.imageUrl}` : '';
         const videoUrl = post.videoUrl ? `http://localhost:5000${post.videoUrl}` : '';
-        const tags = post.tags || [];
+    const tags = post.tags || [];
+    const categories = post.categories || [];
         const author = post.author || {};
         const location = post.location || null;
         const mediaMarkup = videoUrl ? `
@@ -209,6 +213,12 @@ class ExplorePage {
                 
                 <p class="post-description">${this.escapeHtml(content)}</p>
                 
+                ${categories.length > 0 ? `
+                    <div class="post-tags">
+                        ${categories.map(cat => `<span class=\"post-tag\">${this.escapeHtml(cat)}</span>`).join('')}
+                    </div>
+                ` : ''}
+
                 ${tags.length > 0 ? `
                     <div class="post-tags">
                         ${tags.map(tag => `<span class="post-tag">#${this.escapeHtml(tag)}</span>`).join('')}
@@ -251,7 +261,7 @@ class ExplorePage {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/api/v1/users/${userId}/connect`, {
+            const response = await fetch(`http://localhost:5000/api/v1/connections/${userId}/connect`, {
                 method: 'POST',
                 headers: this.getAuthHeaders()
             });
@@ -259,13 +269,13 @@ class ExplorePage {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                this.showSuccess('Connection request sent successfully!');
+                this.showSuccess(result.message || 'Connection request sent successfully!');
             } else {
                 throw new Error(result.message || 'Failed to send connection request');
             }
         } catch (error) {
             console.error('Error sending connection request:', error);
-            this.showError('Failed to send connection request. Please try again.');
+            this.showError(error.message || 'Failed to send connection request. Please try again.');
         }
     }
 
@@ -316,7 +326,7 @@ class ExplorePage {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/api/v1/posts/${this.currentPostId}/meeting`, {
+            const response = await fetch(`http://localhost:5000/api/v1/meetings/posts/${this.currentPostId}/meeting`, {
                 method: 'POST',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify({ date, time, message })
@@ -325,14 +335,14 @@ class ExplorePage {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                this.showSuccess('Meeting request sent successfully!');
+                this.showSuccess(result.message || 'Meeting request sent successfully!');
                 this.closeMeetingModal();
             } else {
                 throw new Error(result.message || 'Failed to send meeting request');
             }
         } catch (error) {
             console.error('Error sending meeting request:', error);
-            this.showError('Failed to send meeting request. Please try again.');
+            this.showError(error.message || 'Failed to send meeting request. Please try again.');
         }
     }
 

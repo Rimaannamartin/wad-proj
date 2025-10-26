@@ -5,7 +5,8 @@ const {
   createOrUpdateProfile,
   getProfileByUserId,
   getAllProfiles,
-  deleteProfile
+  deleteProfile,
+  toggleFollow
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/authMiddleware');
 const { validateProfile } = require('../middleware/validationMiddleware');
@@ -31,6 +32,11 @@ router.post(
 // @desc    Get profile by user ID
 // @access  Public
 router.get('/user/:userId', getProfileByUserId);
+
+// @route   POST /api/profile/user/:userId/follow
+// @desc    Follow or unfollow a user profile
+// @access  Private
+router.post('/user/:userId/follow', protect, toggleFollow);
 
 // @route   GET /api/profiles
 // @desc    Get all profiles with filtering

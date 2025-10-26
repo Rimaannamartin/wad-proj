@@ -4,6 +4,9 @@ let locationMarker;
 let selectedLocation = null;
 let uploadedMedia = [];
 let geocoder;
+let selectedCategories = [];
+let isEditMode = false;
+let editingPostId = null;
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:5000/api/v1';
@@ -14,7 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMediaUpload();
     initializeLocationDetection();
     initializeFormSubmission();
+    initializeCategoriesInput();
     checkAuthentication();
+    detectEditModeAndLoad();
 });
 
 // Enhanced authentication check with token expiry handling
@@ -67,6 +72,74 @@ function getAuthHeaders(expectJson = true) {
     }
 
     return headers;
+}
+
+// Basic HTML escape helper used when rendering dynamic chips/text
+function escapeHtml(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function detectEditModeAndLoad() {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('postId');
+    if (pid) {
+        isEditMode = true;
+        editingPostId = pid;
+        loadPostForEdit(pid).catch(err => {
+            console.error('Failed to load post for editing:', err);
+            const msg = (err && err.message) ? err.message : 'Could not load post for editing.';
+            alert(msg);
+        });
+    }
+}
+
+async function loadPostForEdit(postId) {
+    let res;
+    try {
+        res = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(postId)}`);
+    } catch (e) {
+        throw new Error('Network error while loading post. Ensure the server is running and CORS allows this origin.');
+    }
+    let json = {};
+    try { json = await res.json(); } catch {}
+    if (!res.ok || !json.success || !json.data) throw new Error(json.message || `Failed to load post (${res.status})`);
+    const p = json.data;
+    // Prefill basics
+    document.getElementById('postTitle').value = p.title || '';
+    document.getElementById('postContent').value = p.content || '';
+    // Tags (comma-separated)
+    if (Array.isArray(p.tags)) {
+        document.getElementById('postTags').value = p.tags.join(', ');
+    }
+    // Categories chips
+    if (Array.isArray(p.categories)) {
+        selectedCategories = p.categories.map(c => String(c).toLowerCase());
+        const chips = document.getElementById('categoriesChips');
+        if (chips) {
+            chips.innerHTML = '';
+            selectedCategories.forEach(c => {
+                const el = document.createElement('span');
+                el.className = 'chip';
+                el.innerHTML = `${escapeHtml(c)} <button type="button" aria-label="Remove ${escapeHtml(c)}">&times;</button>`;
+                el.querySelector('button').addEventListener('click', () => {
+                    selectedCategories = selectedCategories.filter(v => v !== c);
+                    el.remove();
+                });
+                chips.appendChild(el);
+            });
+        }
+    }
+    // Media preview note: we won't auto-load existing media; user can upload a new one to replace.
+    // Location: backend stores human-readable string; we won't force resetting map/location on edit.
+    // Indicate edit mode on submit button
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
 }
 
 // Map initialization with Geocoder
@@ -474,6 +547,8 @@ function initializeFormSubmission() {
 
             let requestBody;
             let headers;
+            const method = isEditMode ? 'PUT' : 'POST';
+            const endpoint = isEditMode ? `${API_BASE_URL}/posts/${encodeURIComponent(editingPostId)}` : `${API_BASE_URL}/posts`;
 
             // Create proper GeoJSON location object
             const latNum = parseFloat(latitude);
@@ -487,11 +562,17 @@ function initializeFormSubmission() {
                 address: locationLabel || null
             };
 
+            // Categories
+            const categoriesArray = Array.isArray(selectedCategories) ? selectedCategories : [];
+
             if (hasMedia) {
                 const formData = new FormData();
                 formData.append('title', document.getElementById('postTitle').value.trim());
                 formData.append('content', document.getElementById('postContent').value.trim());
-                formData.append('category', document.getElementById('postCategory').value);
+                // categories as repeated fields
+                if (categoriesArray.length) {
+                    categoriesArray.forEach(c => formData.append('categories', c));
+                }
 
                 // Handle tags properly
                 const rawTags = document.getElementById('postTags').value.trim();
@@ -502,10 +583,12 @@ function initializeFormSubmission() {
                     });
                 }
 
-                // Append location as stringified JSON for FormData
-                formData.append('location', JSON.stringify(locationData));
-                if (locationLabel) {
-                    formData.append('address', locationLabel);
+                // Append location if creating or if user changed (selectedLocation exists)
+                if (!isEditMode || (isEditMode && selectedLocation)) {
+                    formData.append('location', JSON.stringify(locationData));
+                    if (locationLabel) {
+                        formData.append('address', locationLabel);
+                    }
                 }
 
                 formData.append('privacy', document.getElementById('postPrivacy').value);
@@ -524,21 +607,23 @@ function initializeFormSubmission() {
                 const postPayload = {
                     title: document.getElementById('postTitle').value.trim(),
                     content: document.getElementById('postContent').value.trim(),
-                    category: document.getElementById('postCategory').value,
+                    categories: categoriesArray,
                     tags: tagsArray,
-                    privacy: document.getElementById('postPrivacy').value,
-                    location: locationData, // Proper GeoJSON format
-                    address: locationLabel || null
+                    privacy: document.getElementById('postPrivacy').value
                 };
 
-                console.log('Submitting post with location data:', postPayload.location);
+                // Include location only if creating or if user picked a new one now
+                if (!isEditMode || (isEditMode && selectedLocation)) {
+                    postPayload.location = locationData; // Proper GeoJSON format
+                    postPayload.address = locationLabel || null;
+                }
 
                 requestBody = JSON.stringify(postPayload);
                 headers = getAuthHeaders(true);
             }
 
-            const response = await fetch(`${API_BASE_URL}/posts`, {
-                method: 'POST',
+            const response = await fetch(endpoint, {
+                method,
                 headers,
                 body: requestBody
             });
@@ -557,7 +642,13 @@ function initializeFormSubmission() {
             }
 
             loadingOverlay.classList.add('hidden');
-            showSuccessMessage(result.data);
+            if (isEditMode) {
+                // Redirect back to profile after successful edit
+                window.location.href = 'userprofile.html';
+                return;
+            } else {
+                showSuccessMessage(result.data);
+            }
             
         } catch (error) {
             console.error('Error creating post:', error);
@@ -583,7 +674,7 @@ function initializeFormSubmission() {
 function validateForm() {
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
-    const category = document.getElementById('postCategory').value;
+    const categoryCount = selectedCategories.length;
 
     if (!title) {
         alert('Please enter a post title');
@@ -597,18 +688,76 @@ function validateForm() {
         return false;
     }
 
-    if (!category) {
-        alert('Please select a category');
-        document.getElementById('postCategory').focus();
+    if (!categoryCount) {
+        alert('Please add at least one category');
+        document.getElementById('categoriesInput').focus();
         return false;
     }
 
-    if (!selectedLocation) {
-        alert('Please select a location for your post');
-        return false;
+    // In edit mode, allow submitting without re-selecting location
+    if (!isEditMode) {
+        if (!selectedLocation) {
+            alert('Please select a location for your post');
+            return false;
+        }
     }
 
     return true;
+}
+
+// Categories input with chips
+function initializeCategoriesInput() {
+    const input = document.getElementById('categoriesInput');
+    const chips = document.getElementById('categoriesChips');
+    const quick = document.querySelectorAll('.chip-btn');
+
+    const addCategory = (val) => {
+        const v = String(val || '').trim();
+        if (!v) return;
+        if (selectedCategories.includes(v.toLowerCase())) return;
+        selectedCategories.push(v.toLowerCase());
+        renderChips();
+    };
+
+    const removeCategory = (val) => {
+        selectedCategories = selectedCategories.filter(c => c !== val);
+        renderChips();
+    };
+
+    const renderChips = () => {
+        if (!chips) return;
+        chips.innerHTML = '';
+        selectedCategories.forEach(c => {
+            const el = document.createElement('span');
+            el.className = 'chip';
+            el.innerHTML = `${escapeHtml(c)} <button type="button" aria-label="Remove ${escapeHtml(c)}">&times;</button>`;
+            el.querySelector('button').addEventListener('click', () => removeCategory(c));
+            chips.appendChild(el);
+        });
+    };
+
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const val = input.value;
+                input.value = '';
+                addCategory(val);
+            } else if (e.key === 'Backspace' && !input.value && selectedCategories.length) {
+                // remove last
+                selectedCategories.pop();
+                renderChips();
+            }
+        });
+        input.addEventListener('blur', () => {
+            if (input.value.trim()) {
+                addCategory(input.value.trim());
+                input.value = '';
+            }
+        });
+    }
+
+    quick.forEach(btn => btn.addEventListener('click', () => addCategory(btn.dataset.cat)));
 }
 
 // Show success message

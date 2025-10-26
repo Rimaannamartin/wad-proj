@@ -102,9 +102,31 @@ body {
 	gap: 16px;
 }
 
+.profile-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 14px;
+}
+
 .profile-username {
 	font-size: 2.2rem;
 	font-weight: 600;
+}
+
+.follow-btn {
+	background: none;
+	border: 1px solid rgba(0, 224, 255, 0.4);
+	color: var(--accent);
+	padding: 10px 18px;
+	border-radius: 999px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.25s ease;
+}
+
+.follow-btn:hover {
+	background: rgba(0, 224, 255, 0.12);
+	box-shadow: 0 10px 24px rgba(0, 224, 255, 0.18);
 }
 
 .edit-profile-btn {
@@ -129,7 +151,8 @@ body {
 
 .profile-stats {
 	display: flex;
-	gap: 28px;
+	flex-wrap: wrap;
+	gap: 20px;
 }
 
 .stat-item {
@@ -159,6 +182,24 @@ body {
 	gap: 10px;
 	color: var(--text-muted);
 	font-size: 0.98rem;
+}
+
+.profile-message {
+	min-height: 22px;
+	color: var(--accent);
+	font-size: 0.9rem;
+}
+
+.profile-message.error {
+	color: #ff6b6b;
+}
+
+.profile-message.info {
+	color: var(--text-muted);
+}
+
+.profile-message.success {
+	color: var(--accent);
 }
 
 .bio-btn {
@@ -213,34 +254,219 @@ body {
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	padding: 28px;
 	box-shadow: 0 26px 60px rgba(3, 11, 26, 0.4);
+	animation: fadeUp 0.7s ease both;
 }
 
 .content-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 18px;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 22px;
+	justify-items: stretch;
+	align-items: start;
+	grid-auto-rows: 1fr;
 }
 
-.post,
-.video {
+.profile-post-card,
+.profile-video-card {
 	background: rgba(0, 224, 255, 0.06);
 	border-radius: 18px;
 	border: 1px solid rgba(0, 224, 255, 0.16);
+	padding: 20px;
 	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 180px;
-	color: var(--text-muted);
-	font-weight: 600;
+	flex-direction: column;
+	gap: 12px;
+	height: 100%;
+	position: relative;
 	transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+	animation: cardPop 0.6s ease both;
 }
 
-.post:hover,
-.video:hover {
+.profile-post-card .post-media,
+.profile-video-card .post-media {
+	width: 100%;
+	height: 200px;
+	border-radius: 14px;
+	overflow: hidden;
+	border: 1px solid rgba(0, 224, 255, 0.12);
+	position: relative;
+}
+
+.profile-post-card .post-media img,
+.profile-post-card .post-media video,
+.profile-video-card .post-media img,
+.profile-video-card .post-media video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	background-color: rgba(6, 18, 32, 0.8);
+}
+
+.profile-post-card:hover,
+.profile-video-card:hover {
 	transform: translateY(-4px);
 	border-color: rgba(0, 224, 255, 0.45);
 	box-shadow: 0 18px 35px rgba(0, 224, 255, 0.18);
-	color: var(--text-main);
+}
+
+.post-title {
+	font-size: 1.1rem;
+	font-weight: 600;
+}
+
+.post-meta {
+	display: flex;
+	justify-content: space-between;
+	color: var(--text-muted);
+	font-size: 0.85rem;
+}
+
+.post-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.post-tag {
+	font-size: 0.75rem;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: rgba(0, 224, 255, 0.12);
+	border: 1px solid rgba(0, 224, 255, 0.22);
+}
+
+/* Post card actions (e.g., Delete) */
+.post-actions {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: flex;
+	gap: 8px;
+	opacity: 0;
+	transform: translateY(-4px);
+	pointer-events: none;
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.profile-post-card:hover .post-actions,
+.profile-video-card:hover .post-actions {
+	opacity: 1;
+	transform: translateY(0);
+	pointer-events: auto;
+}
+
+.delete-post-btn {
+	background: rgba(3, 10, 21, 0.6);
+	border: 1px solid rgba(255, 107, 107, 0.45);
+	color: #ff6b6b;
+	padding: 6px 10px;
+	border-radius: 999px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.8rem;
+	box-shadow: 0 10px 20px rgba(3, 10, 21, 0.35);
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+	transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.delete-post-btn:hover {
+	background: rgba(255, 107, 107, 0.14);
+	box-shadow: 0 12px 24px rgba(255, 107, 107, 0.18);
+}
+
+.delete-post-btn i { pointer-events: none; }
+
+/* Edit post button styling */
+.edit-post-btn {
+	background: rgba(3, 10, 21, 0.6);
+	border: 1px solid rgba(0, 224, 255, 0.45);
+	color: var(--accent);
+	padding: 6px 10px;
+	border-radius: 999px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.8rem;
+	box-shadow: 0 10px 20px rgba(3, 10, 21, 0.35);
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+	transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.edit-post-btn:hover {
+	background: rgba(0, 224, 255, 0.14);
+	box-shadow: 0 12px 24px rgba(0, 224, 255, 0.18);
+}
+
+.edit-post-btn i { pointer-events: none; }
+
+/* Responsive: show actions without hover on small screens and hide text label */
+@media (max-width: 680px) {
+	.post-actions {
+		opacity: 1;
+		transform: none;
+		pointer-events: auto;
+	}
+	.delete-post-btn .label { display: none; }
+}
+
+
+.profile-post-card p,
+.profile-video-card p {
+	flex: 1;
+	color: var(--text-muted);
+}
+
+.content-tabs {
+	animation: fadeUp 0.6s ease both;
+}
+
+.profile-header {
+	animation: fadeUp 0.6s ease both;
+}
+
+.content-grid > *:nth-child(1) { animation-delay: 0.05s; }
+.content-grid > *:nth-child(2) { animation-delay: 0.1s; }
+.content-grid > *:nth-child(3) { animation-delay: 0.15s; }
+.content-grid > *:nth-child(4) { animation-delay: 0.2s; }
+.content-grid > *:nth-child(5) { animation-delay: 0.25s; }
+.content-grid > *:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes fadeUp {
+	0% {
+		opacity: 0;
+		transform: translateY(24px) scale(0.98);
+	}
+	60% {
+		opacity: 1;
+		transform: translateY(-4px) scale(1.01);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes cardPop {
+	0% {
+		opacity: 0;
+		transform: translateY(30px) scale(0.96);
+	}
+	70% {
+		opacity: 1;
+		transform: translateY(-6px) scale(1.02);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.empty-state {
+	text-align: center;
+	color: var(--text-muted);
+	padding: 24px;
+	border: 1px dashed rgba(0, 224, 255, 0.2);
+	border-radius: 18px;
 }
 
 .modal {
@@ -352,6 +578,11 @@ form button[type="button"] {
 
 	.profile-stats {
 		justify-content: center;
+		gap: 16px;
+	}
+
+	.profile-actions {
+		flex-direction: column;
 	}
 }
 

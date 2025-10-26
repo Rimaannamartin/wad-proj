@@ -6,7 +6,7 @@ const asyncHandler = require('express-async-handler');
 // @access  Private
 const createPost = asyncHandler(async (req, res) => {
   console.log('Incoming createPost body:', req.body);
-  let { title, content, tags, latitude, longitude, address, location } = req.body;
+  let { title, content, tags, categories, category, latitude, longitude, address, location } = req.body;
 
   // Support location sent as JSON string or object (GeoJSON format)
   let parsedLocation = null;
@@ -38,6 +38,17 @@ const createPost = asyncHandler(async (req, res) => {
       .filter(Boolean);
   }
 
+  // Normalize categories (array or comma-separated) and map single 'category' fallback
+  let normalizedCategories = [];
+  if (Array.isArray(categories)) {
+    normalizedCategories = categories.map(c => String(c).trim()).filter(Boolean);
+  } else if (typeof categories === 'string') {
+    normalizedCategories = categories.split(',').map(c => c.trim()).filter(Boolean);
+  }
+  if (!normalizedCategories.length && category) {
+    normalizedCategories = [String(category).trim()].filter(Boolean);
+  }
+
   // Basic validation
   if (!title || !content) {
     return res.status(400).json({
@@ -58,7 +69,8 @@ const createPost = asyncHandler(async (req, res) => {
     author: req.user._id,
     imageUrl: null,
     videoUrl: null,
-    tags: normalizedTags
+    tags: normalizedTags,
+    categories: normalizedCategories
   };
 
   // Add location if valid
@@ -79,7 +91,7 @@ const createPost = asyncHandler(async (req, res) => {
   const post = await Post.create(postData);
 
   // Populate author details
-  await post.populate('author', 'username profilePicture firstName lastName');
+  await post.populate('author', 'name username profilePicture firstName lastName email');
 
   res.status(201).json({
     success: true,
@@ -110,9 +122,25 @@ const getPosts = asyncHandler(async (req, res) => {
     query.author = req.query.author;
   }
 
-  // Filter by category (using tags)
+  // Filter by category/categories (primary: categories field; fallback: tags)
   if (req.query.category) {
-    query.tags = { $in: [req.query.category] };
+    const val = String(req.query.category).trim();
+    query.$or = [
+      { categories: { $in: [val] } },
+      { tags: { $in: [val] } }
+    ];
+  }
+  if (req.query.categories) {
+    const list = req.query.categories.split(',').map(v => v.trim()).filter(Boolean);
+    if (list.length) {
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { categories: { $in: list } },
+          { tags: { $in: list } }
+        ]
+      });
+    }
   }
 
   // Search in title, content, and tags
@@ -145,9 +173,9 @@ const getPosts = asyncHandler(async (req, res) => {
   try {
     // Get posts with pagination
     const posts = await Post.find(query)
-      .populate('author', 'username profilePicture firstName lastName')
-      .populate('likes', 'username profilePicture firstName lastName')
-      .populate('comments.user', 'username profilePicture firstName lastName')
+  .populate('author', 'name username profilePicture firstName lastName email')
+  .populate('likes', 'name username profilePicture firstName lastName email')
+  .populate('comments.user', 'name username profilePicture firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -198,9 +226,9 @@ const getPosts = asyncHandler(async (req, res) => {
 const getPostById = asyncHandler(async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)
-      .populate('author', 'username profilePicture firstName lastName')
-      .populate('likes', 'username profilePicture firstName lastName')
-      .populate('comments.user', 'username profilePicture firstName lastName');
+      .populate('author', 'name username profilePicture firstName lastName email')
+      .populate('likes', 'name username profilePicture firstName lastName email')
+      .populate('comments.user', 'name username profilePicture firstName lastName email');
 
     if (!post) {
       return res.status(404).json({
@@ -256,7 +284,7 @@ const updatePost = asyncHandler(async (req, res) => {
     });
   }
 
-  const { title, content, tags, latitude, longitude, address, location } = req.body;
+  const { title, content, tags, categories, category, latitude, longitude, address, location } = req.body;
 
   // Update fields
   if (title) post.title = title;
@@ -268,6 +296,20 @@ const updatePost = asyncHandler(async (req, res) => {
     } else if (typeof tags === 'string') {
       post.tags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
     }
+  }
+
+  // Update categories if provided (array or comma-separated), support single 'category'
+  if (categories || category) {
+    let normalizedCategories = [];
+    if (Array.isArray(categories)) {
+      normalizedCategories = categories.map(c => String(c).trim()).filter(Boolean);
+    } else if (typeof categories === 'string') {
+      normalizedCategories = categories.split(',').map(c => c.trim()).filter(Boolean);
+    }
+    if (!normalizedCategories.length && category) {
+      normalizedCategories = [String(category).trim()].filter(Boolean);
+    }
+    post.categories = normalizedCategories;
   }
   
   if (req.file) {
@@ -310,7 +352,7 @@ const updatePost = asyncHandler(async (req, res) => {
   await post.save();
 
   // Populate author details
-  await post.populate('author', 'username profilePicture firstName lastName');
+  await post.populate('author', 'name username profilePicture firstName lastName email');
 
   // Transform location for response
   const postObj = post.toObject ? post.toObject() : { ...post };
